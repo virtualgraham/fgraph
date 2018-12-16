@@ -4,7 +4,7 @@ import cv2
 import hnswlib
 import math
 from os import listdir, path
-from database import PatchGraphDatabase
+from prev_approaches.database import PatchGraphDatabase
 import time
 
 patch_size = 96

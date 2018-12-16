@@ -4,7 +4,7 @@ import hnswlib
 import math
 from os import listdir, path
 from prev_approaches.l2_net import L2Net
-from database import PatchGraphDatabase
+from prev_approaches.database import PatchGraphDatabase
 
 sun_rgbd_directory = "/Users/user/Desktop/SUNRGBD"
 

@@ -3,7 +3,7 @@ import math
 import numpy as np
 from prev_approaches.l2_net import L2Net
 from os import listdir, path
-from database import PatchGraphDatabase
+from prev_approaches.database import PatchGraphDatabase
 import hnswlib
 import time
 

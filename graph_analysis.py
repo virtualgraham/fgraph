@@ -1,8 +1,5 @@
-import os
-import math
 from os import listdir, path
-from database import PatchGraphDatabase
-import numpy as np
+from prev_approaches.database import PatchGraphDatabase
 import cv2
 from random import randint
 
