@@ -1,5 +1,4 @@
 import hnswlib
-import os
 import math
 from os import listdir, path
 from database import PatchGraphDatabase
@@ -11,25 +10,26 @@ import numpy as np
 # exlude nodes that are already closely connected via other relationship types
 # add resembles relationship from scene patch to nearest descriptor neighbor
 
-sun_rgbd_directory = "/Users/user/Desktop/SUNRGBD"
-
-def list_image_paths(collection_dir):
-    scene_dirs = [path.join(collection_dir, d, "image") for d in listdir(collection_dir) if path.isdir(path.join(collection_dir, d))]
-    image_paths = [[path.join(d, e) for e in listdir(d)][0] for d in scene_dirs]
-    return [(p[len(sun_rgbd_directory)+1:], p) for p in image_paths]
+images_directory = "/Users/user/Desktop/household_images"
 
 print("Loading desc_index.bin")
 
-desc_index = hnswlib.Index(space='l2', dim=128)
-desc_index.load_index("desc_index.bin", max_elements = 7000000)
+descriptor_size = 1280
+desc_index = hnswlib.Index(space='cosine', dim=descriptor_size)
+desc_index.load_index("desc_index.bin", max_elements=7000000)
+
 
 database = PatchGraphDatabase()
 
-images = list_image_paths(path.join(sun_rgbd_directory, "kv2", "kinect2data")) + list_image_paths(path.join(sun_rgbd_directory, "kv2", "align_kv2"))
+images = [(e, path.join(images_directory, e)) for e in listdir(images_directory)]
 
 print("Starting")
 
 # mark = False
+
+neighbor_count = 30
+neighbor_distance = 0.07
+
 count = 0
 
 for image_name, image_path in images:
@@ -51,26 +51,56 @@ for image_name, image_path in images:
 
     resemblances = []
 
+    skipped_because_of_dup_other = 0
+    skipped_because_not_similar = 0
+
     for patch in patches:
         
         patch_id = int(patch['id'])
 
         descriptor = np.array(patch['des'])
-        labels, distances = desc_index.knn_query(descriptor, k=10)
+        labels, distances = desc_index.knn_query(descriptor, k=neighbor_count)
         
+        # list all the patches for the labels and create a dictionary of ids to scene
+        scene_dict = {}
+
+        similar_patch_ids = [int(label) for label in labels[0]]
+        similar_patches = database.get_patchs(similar_patch_ids)
+        # print('len(similar_patches)', len(similar_patches))
+
+        for similar_patch in similar_patches:
+            scene_dict[similar_patch['id']] = similar_patch['scene']
+
+        similar_scenes = set()
+
         for i in range(labels.shape[1]):
 
-            distance = math.sqrt(float(distances[0,i]))
-            if distance > 0.75:
+            distance = float(distances[0, i]) #math.sqrt(float(distances[0, i]))
+
+            if distance > neighbor_distance:
+                skipped_because_not_similar += (neighbor_count + i)
                 break
 
-            label = int(labels[0,i])
-            
-            if label in patch_id_set:
+            label = int(labels[0, i])
+
+            # if resemblance is to this scene or antother scene this patch has already resembled, skip
+            if label in patch_id_set: 
                 continue
 
+            similar_scene = scene_dict[label]
+
+            if similar_scene in similar_scenes:
+                skipped_because_of_dup_other += 1
+                continue
+                      
+            similar_scenes.add(similar_scene)
+
             resemplance = {'from': patch_id, 'to': label, 'dist': distance}
+
             resemblances.append(resemplance)
 
     insert_result = database.insert_resembles_relationships(resemblances)
-    print(len(resemblances), len(insert_result))
+
+    print('skipped_because_of_dup_other', skipped_because_of_dup_other)
+    print('skipped_because_not_similar', skipped_because_not_similar)
+    print('len(resemblances)', len(resemblances))

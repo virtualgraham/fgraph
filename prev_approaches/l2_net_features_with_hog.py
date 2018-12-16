@@ -1,10 +1,14 @@
 import cv2
 import math
 import numpy as np
-from l2_net import L2Net
+from prev_approaches.l2_net import L2Net
+from os import listdir, path
+from database import PatchGraphDatabase
+import hnswlib
+import time
+
 
 def get_hog_gradients(image, cell_width=32):
-
     cell_size=(cell_width, cell_width)
     block_size = (2, 2) 
     nbins = 18  
@@ -51,8 +55,13 @@ def get_hog_gradients(image, cell_width=32):
             q = h[n]
             r = h[o]
             
-            s = p/(p+q) * (180/nbins)
-            t = r/(q+r) * (180/nbins)
+            if q > 0:
+                s = p/(p+q) * (180/nbins)
+                t = r/(q+r) * (180/nbins)
+            else:
+                print("not (p > 0 and q > 0)")
+                s = 0
+                t = 0
 
             u = (n + 0.5) * (180/nbins)
             v = u - s + t
@@ -64,6 +73,7 @@ def get_hog_gradients(image, cell_width=32):
                 angles[x,y] = 0 - v
 
     return angles
+
 
 def extract_patches(image, cellSize=32, interior_w=False, interior_h=False):
 
@@ -110,10 +120,12 @@ def extract_patches(image, cellSize=32, interior_w=False, interior_h=False):
 
     return np.reshape(patches,(n_cells[0] * n_cells[1], cellSize, cellSize)), np.reshape(angles, (n_cells[0] * n_cells[1],)), np.reshape(coords, (n_cells[0] * n_cells[1], 2)), n_cells
 
+descriptor_size = 256
+descriptor_window_size = 64
+l2_net = L2Net("L2Net-HP+", True)
 
-l2_net = L2Net("L2Net-HP+", False)
 
-def extract_features(image_path, image_name, window_size=32):
+def extract_image_features(image_path, image_name, window_size=32):
     image = cv2.imread(image_path,0)
 
     # print('image.dtype', image.dtype)
@@ -147,13 +159,13 @@ def extract_features(image_path, image_name, window_size=32):
     coords = np.concatenate((coords_a, coords_b, coords_c, coords_d), axis=0)
     angles = np.concatenate((angles_a, angles_b, angles_c, angles_d), axis=0)
 
-    if window_size == 32:
-        patches_resized = np.reshape(patches, (patches.shape[0], 32, 32, 1))
+    if window_size == descriptor_window_size:
+        patches_resized = np.reshape(patches, (patches.shape[0], descriptor_window_size, descriptor_window_size, 1))
     else:
-        patches_resized = np.empty((patches.shape[0], 32, 32, 1))
+        patches_resized = np.empty((patches.shape[0], descriptor_window_size, descriptor_window_size, 1))
         for i in range(patches.shape[0]):
-            patch_resized = cv2.resize(patches[i], (32,32), interpolation = cv2.INTER_CUBIC)
-            patches_resized[i] = np.reshape(patch_resized, (32, 32, 1))
+            patch_resized = cv2.resize(patches[i], (descriptor_window_size, descriptor_window_size), interpolation=cv2.INTER_CUBIC)
+            patches_resized[i] = np.reshape(patch_resized, (descriptor_window_size, descriptor_window_size, 1))
 
     descriptors = l2_net.calc_descriptors(patches_resized)
 
@@ -168,3 +180,91 @@ def extract_features(image_path, image_name, window_size=32):
         patch_dicts.append(patch_dict)
 
     return patch_dicts
+
+
+sun_rgbd_directory = "/Users/user/Desktop/SUNRGBD"
+
+
+def list_image_paths(collection_dir):
+    scene_dirs = [path.join(collection_dir, d, "image") for d in listdir(collection_dir) if path.isdir(path.join(collection_dir, d))]
+    image_paths = [[path.join(d, e) for e in listdir(d)][0] for d in scene_dirs]
+    return [(p[len(sun_rgbd_directory)+1:], p) for p in image_paths]
+
+
+images = list_image_paths(path.join(sun_rgbd_directory, "kv2", "kinect2data")) + list_image_paths(path.join(sun_rgbd_directory, "kv2", "align_kv2"))
+
+database = PatchGraphDatabase()
+
+desc_index = hnswlib.Index(space = 'l2', dim = descriptor_size)
+desc_index.init_index(max_elements = 7000000, ef_construction = 200, M = 16)
+desc_index.set_ef(50)
+
+
+def extract_features_to_db(image_path, image_name, scene_node, size):
+    patches = extract_image_features(image_path, image_name, size)
+
+    insert_patches_result = database.insert_patches(patches)
+    print("inserted patch nodes", len(insert_patches_result))
+
+    data = np.array([p['des'] for p in insert_patches_result], dtype=np.float32)
+    data_labels = np.array([p['id'] for p in insert_patches_result])
+
+    desc_index.add_items(data, data_labels)
+
+    # insert neighbor relationships
+
+    locations = np.array([p['loc'] for p in insert_patches_result], dtype=np.float32)
+
+    loc_index = hnswlib.Index(space = 'l2', dim = 2)
+    loc_index.init_index(max_elements = len(insert_patches_result), ef_construction = 1000, M = 50)
+    loc_index.set_ef(1000)
+    loc_index.add_items(locations, data_labels)
+
+    relationships = []
+
+    for i in range(0, len(insert_patches_result)):
+        from_label = data_labels[i]
+        labels, distances = loc_index.knn_query(locations[i], k=13)
+        for j in range(0, distances.shape[1]):
+            if distances[0][j] > 0 and distances[0][j] <= size**2:
+                relationships.append({"from": from_label, "to": labels[0][j], "dist": math.sqrt(distances[0][j])})
+
+    result = database.insert_scene_neighbor_relationships(relationships)
+
+    print("inserted neighbor relationships", len(result))
+
+    # insert contains relationships
+
+    scene_contains_relationships = [{"from": scene_node['id'], "to": label} for label in data_labels]
+    result = database.insert_scene_contains_relationships(scene_contains_relationships) 
+    print("inserted contains relationships", len(result))
+
+
+last_finished_index = -1
+start = time.time()
+
+for i in range(100):
+
+    print('last_finished_index', last_finished_index)
+
+    image_path = images[i][1]
+    image_name = images[i][0]
+
+    # insert scene node
+    insert_scene_result = database.insert_scene({"scene": image_name})
+    scene_node = insert_scene_result[0]
+    print("inserted scene node")
+
+    extract_features_to_db(image_path, image_name, scene_node, 64)
+    extract_features_to_db(image_path, image_name, scene_node, 32)
+
+    last_finished_index = i
+    
+end = time.time()
+print('time elapsed', end - start)
+
+print('saving desc_index')
+
+desc_index.save_index("desc_index.bin")
+
+print('finished')

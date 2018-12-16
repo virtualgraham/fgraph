@@ -4,6 +4,9 @@ import json
 
 batch_size = 100
 
+
+# CREATE INDEX ON :Patch(scene)
+
 class PatchGraphDatabase:
     def __init__(self, url='bolt://localhost:7687', user='neo4j', password='password'):
         self._driver = GraphDatabase.driver(url, auth=(user, password))
@@ -31,9 +34,9 @@ class PatchGraphDatabase:
         with self._driver.session() as session:
             return session.write_transaction(PatchGraphDatabase._insert_scene_contains_relationships, relationships)
 
-    def get_patch(self, id):
+    def get_patchs(self, ids):
         with self._driver.session() as session:
-            return session.write_transaction(PatchGraphDatabase._get_patch, id)
+            return session.write_transaction(PatchGraphDatabase._get_patchs, ids)
 
     def list_scene_patches(self, scene):
         with self._driver.session() as session:
@@ -53,7 +56,7 @@ class PatchGraphDatabase:
 
     @staticmethod
     def _patch_from_node(node):
-        patch = {'id': node.id, 'loc': PatchGraphDatabase._cartesian_point_to_tuple_2d(node.get('loc')), 'des': json.loads(node.get('des')), 'scene': node.get('scene'), 'size': node.get('size'), 'angle': node.get('angle') }
+        patch = {'id': node.id, 'loc': PatchGraphDatabase._cartesian_point_to_tuple_2d(node.get('loc')), 'des': json.loads(node.get('des')), 'scene': node.get('scene'), 'size': node.get('size')} # , 'angle': node.get('angle')
         return patch
 
     @staticmethod
@@ -77,10 +80,18 @@ class PatchGraphDatabase:
         return patch
 
     @staticmethod
-    def _get_patch(tx, id):
-        query = "MATCH (patch:Patch) WHERE ID(patch) = $id RETURN patch"
-        result = tx.run(query, id=id)    
-        return [PatchGraphDatabase._patch_from_node(record['patch']) for record in result]
+    def _get_patchs(tx, ids):
+        # query = "MATCH (patch:Patch) WHERE ID(patch) = $id RETURN patch"
+        # result = tx.run(query, id=id)    
+        # return [PatchGraphDatabase._patch_from_node(record['patch']) for record in result]
+
+        items = [{"id": int(id)} for id in ids]
+        query = "UNWIND {props} as prop MATCH (patch:Patch) WHERE ID(patch) = prop.id RETURN patch"
+        record_to_object_func = PatchGraphDatabase._patch_from_node
+        unwind_name = 'props'
+        return_name='patch'
+
+        return PatchGraphDatabase._batch_insert(tx, items, query, record_to_object_func, unwind_name, return_name)
 
     @staticmethod
     def _list_scene_patches(tx, scene):
@@ -101,9 +112,6 @@ class PatchGraphDatabase:
 
         foo = [[path for path in record['path']] for record in result]
         return [(PatchGraphDatabase._patch_from_node(bar[0].nodes[1]), PatchGraphDatabase._patch_from_node(bar[2].nodes[1])) for bar in foo]
-
-
-    # CREATE INDEX ON :Patch(scene)
 
     @staticmethod
     def _insert_resembles_relationships(tx, relationships):
@@ -141,7 +149,7 @@ class PatchGraphDatabase:
     @staticmethod
     def _insert_patches(tx, patches):
         
-        items = [{"des": json.dumps(p['des'].tolist(), separators=(',', ':')), "scene": p['scene'], "size": p['size'], "angle": p['angle'], "loc": CartesianPoint(( float(p['loc'][0]), float(p['loc'][1] ))) }  for p in patches]
+        items = [{"des": json.dumps(p['des'].tolist(), separators=(',', ':')), "scene": p['scene'], "size": p['size'], "loc": CartesianPoint(( float(p['loc'][0]), float(p['loc'][1] ))) }  for p in patches] #, "angle": p['angle']
         query = "UNWIND {props} AS properties CREATE (patch:Patch) SET patch = properties RETURN patch"
         record_to_object_func = PatchGraphDatabase._patch_from_node
         unwind_name = 'props'

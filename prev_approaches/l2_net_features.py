@@ -1,10 +1,9 @@
 import numpy as np
 import cv2
 import hnswlib
-import os
 import math
 from os import listdir, path
-from l2_net import L2Net
+from prev_approaches.l2_net import L2Net
 from database import PatchGraphDatabase
 
 sun_rgbd_directory = "/Users/user/Desktop/SUNRGBD"
