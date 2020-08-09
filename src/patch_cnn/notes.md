@@ -1,0 +1,1 @@
+This was an idea to make VGG16 features more like patch descriptors. But ultimately it turned out the most optimal solution was just to set `input_shape=(32, 32, 3)` on the Keras VGG16 model.
