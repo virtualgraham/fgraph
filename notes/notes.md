@@ -55,6 +55,11 @@ get_integrated_nodes(observation_id)
 
 ```
 
+# New interpretation of nodes
+Nodes represent areas of of feature space (spheres?) connected in a graph. 
+Two new properties of nodes emerge under the new interpretation. First a integrated feature count, which is useful when tracking the mean. Also a radius value.
+
+
 # need a higher graph of groups in the lower graph
 perhaps each node in the lower graph is in the higher graph but has the max features of its random walked community. the connections would then connect to any node that shares a community node. This would be a much more highly connected graph. This would cause communities to become fully connected and adjacent communities to become more connected.
 
