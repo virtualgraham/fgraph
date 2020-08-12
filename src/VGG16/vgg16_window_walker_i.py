@@ -1,18 +1,18 @@
 ######################################################################
 
-from keras.applications import vgg16
-from keras.applications.vgg16 import preprocess_input
-
-import cv2
 import math
 import random
-import math 
+import time
+
 import numpy as np
-import math
+from scipy import spatial
+
+import cv2
 import hnswlib
 import networkx as nx
-from scipy import spatial
-import time
+
+from keras.applications import vgg16
+from keras.applications.vgg16 import preprocess_input
 
 
 class MemoryGraphWalker:
