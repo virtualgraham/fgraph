@@ -5,6 +5,7 @@ import random
 import time
 import struct
 import os.path
+import json
 
 import numpy as np
 from scipy import spatial
@@ -149,65 +150,125 @@ class MemoryGraph:
 
 
     def close(self):
-        self.save()
         self.db.close()
-
-
-    def save(self):
-        index_path = self.path + ".bin"
-        graph_path = self.path + ".pickle"
-
-        self.index.save_index(index_path)
-        nx.write_gpickle(self.graph, graph_path)
+        self.graph = None
+        self.index = None
+        self.db = None
 
 
     def open(self):
-        index_path = self.path + ".bin"
-        graph_path = self.path + ".pickle"
-        db_path = self.path + ".db"
+        self.db = plyvel.DB(self.path, create_if_missing=True)
 
-        index_path_exists = os.path.isfile(index_path)
-        graph_path_exists = os.path.isfile(graph_path)
+        self.graph = nx.Graph()
 
-        # Open KNN Index
-        self.index = hnswlib.Index(space=self.space, dim=self.dim)
+        self.index = hnswlib.Index(space=self.space, dim=self.dim)     
+        self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
+        self.index.set_ef(self.ef)
 
-        if index_path_exists:    
-            self.index.load_index(index_path)
+        print("MemoryGraph: loading nodes")
+        nodes = self.load_all_nodes()
+        for node in nodes:
+            print(node)
+            self.graph.add_node(node["id"], f=node["f"])
+            self.index.add_items([node["f"]], [node["id"]])
+
+        print("MemoryGraph: loading edges")
+        edges = self.load_all_edges()
+        for from_node_id, to_node_id in edges:
+            print(from_node_id, to_node_id)
+            self.graph.add_edge(from_node_id, to_node_id)
+
+        print("MemoryGraph: done")
+
+
+    def increment_node_id(self, count):
+        return self.increment_id(count, b'd:n')
+
+    def increment_observation_id(self, count):
+        return self.increment_id(count, b'd:o')
+
+    def increment_id(self, count, key):
+        b = self.db.get(key)
+        if b is None:
+            node_id = count
         else:
-            self.index = hnswlib.Index(space=self.space, dim=self.dim)
-            self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
-
-        self.index.set_ef(self.ef)  
-
-        # Open Graph
-        if graph_path_exists:
-            self.graph = nx.read_gpickle(graph_path)
-        else:
-            self.graph = nx.Graph(next_id=0)
-
-        self.db = plyvel.DB(db_path, create_if_missing=True)
+            node_id = struct.unpack('>I', b)[0]
+            node_id += count
+        b = struct.pack('>I', node_id)
+        self.db.put(key, b)
+        return list(range(node_id-count+1, node_id+1))
 
 
     ######################
     # NODES
     ######################
 
+    # node:[node_id] -> [node_data]
+    @staticmethod
+    def encode_node(node):
+        enc_node = dict()
+        for k, v in node.items():
+            if k == "f":
+                enc_node[k] = v.tolist()
+            else:
+                enc_node[k] = v
+        j = json.dumps(enc_node)
+        return j.encode("utf-8")
+
+    @staticmethod
+    def decode_node(k, v):
+        node = json.loads(v.decode("utf-8") )
+        node["f"] = np.array(node["f"])
+        node["id"] = struct.unpack_from('>I', k, offset=1)[0]
+        return node
+
+    @staticmethod
+    def node_key(node_id):
+        return b'n' + struct.pack('>I', node_id)
+
     def get_node(self, node_id):
         return self.graph.nodes[node_id]
 
-    def insert_node(self, feat):
-        id = self.graph.graph["next_id"]
-        self.graph.graph["next_id"] = id + 1
-        self.graph.add_node(id, f=feat)
-        self.index.add_items([f], [id])
-        return id
+    def insert_node(self, node):
+        return self.insert_nodes([node])[0]
 
-    def get_nodes(self, node_id):
-        return [self.get_node(id) for id in node_id]
+    def load_all_nodes(self):
+        start = MemoryGraph.node_key(0)
+        stop = MemoryGraph.node_key(4294967295)
+        return [MemoryGraph.decode_node(key, value) for key, value in self.db.iterator(start=start, stop=stop)]
 
-    def insert_nodes(self, feats):
-        return [self.insert_node(f) for f in feats]
+    def get_nodes(self, node_ids):
+        return [self.get_node(node_id) for node_id in node_ids]
+
+    def insert_nodes(self, nodes):
+        node_ids = self.increment_node_id(len(nodes))
+        wb = self.db.write_batch()
+        for node_id, node in zip(node_ids, nodes):
+            self.graph.add_node(node_id, f=node["f"])
+            self.index.add_items([node["f"]], [node_id])
+            wb.put(MemoryGraph.node_key(node_id), MemoryGraph.encode_node(node))
+        wb.write()
+        return node_ids
+
+
+    ######################
+    # EDGES
+    ######################
+
+    @staticmethod
+    def edge_key(edge):
+        return b'e' + struct.pack('>I', edge[0]) + struct.pack('>I', edge[1])
+
+    def save_edges(self, edges):
+        wb = self.db.write_batch()
+        for from_node_id, to_node_id in edges:
+            wb.put(MemoryGraph.edge_key((from_node_id, to_node_id)), b'')
+        wb.write()
+
+    def load_all_edges(self):
+        start = MemoryGraph.edge_key((0,0))
+        stop = MemoryGraph.edge_key((4294967295, 4294967295))
+        return [(struct.unpack_from('>I', b, offset=1)[0], struct.unpack_from('>I', b, offset=5)[0]) for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
 
     ######################
@@ -219,34 +280,26 @@ class MemoryGraph:
     def observation_key(observation_id):
         return b'o' + struct.pack('>I', observation_id)
 
-    @staticmethod
-    def encode_observation(observation):
-        # TODO: encode
-        return struct.pack('>I', observation.x) + struct.pack('>I', observation.y) + struct.pack('>I', observation.t) + struct.pack('>I', observation.f)
-
-    @staticmethod
-    def decode_observation(bytes):
-        # TODO: decode
-        return b'o' + struct.pack('>I', observation_id)
-
-
-    # insert and get observation
+    # get observation - observation is a dictionary
     def get_observation(self, observation_id):
-        self.db.get(MemoryGraph.observation_key(observation_id))
-   
+        b = self.db.get(MemoryGraph.observation_key(observation_id))
+        return json.loads(b.decode("utf-8") )
+
     def insert_observation(self, observation):
-        return insert_observations([observation])[0]
+        return self.insert_observations([observation])[0]
 
     def get_observations(self, observation_ids):
-        return [decode_observation(self.get_observation(observation_id)) for observation_id in observation_ids]
+        return [self.get_observation(observation_id) for observation_id in observation_ids]
 
     def insert_observations(self, observations):
-        # TODO generate observation ids
+        observation_ids = self.increment_observation_id(len(observations))
         wb = self.db.write_batch()
-        for observation in observations:
-            wb.put(MemoryGraph.observation_key(observation_id), encode_observation(observation))
+        for observation_id, observation in zip(observation_ids, observations):
+            j = json.dumps(observation)
+            b = j.encode("utf-8")
+            wb.put(MemoryGraph.observation_key(observation_id), b)
         wb.write()
-
+        return observation_ids
 
     # integrated_observation:[node_id]:[observation_id]
     @staticmethod
@@ -257,12 +310,13 @@ class MemoryGraph:
     def get_integrated_observations(self, node_id):
         start = MemoryGraph.integrated_observations_key(node_id, 0)
         stop = MemoryGraph.integrated_observations_key(node_id, 4294967295)
-        return [struct.unpack_from('>I', b, offset=5) for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>I', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
-    def add_integrated_observation(self, node_ids, observation_ids):
+    def add_integrated_observations(self, node_ids, observation_ids):
         wb = self.db.write_batch()
         for node_id, observation_id in zip(node_ids, observation_ids):
             wb.put(MemoryGraph.integrated_observations_key(node_id, observation_id), b'')
+            wb.put(MemoryGraph.integrated_nodes_key(observation_id, node_id), b'')
         wb.write()
 
 
@@ -275,12 +329,13 @@ class MemoryGraph:
     def get_predicted_observations(self, node_id):
         start = MemoryGraph.predicted_observations_key(node_id, 0)
         stop = MemoryGraph.predicted_observations_key(node_id, 4294967295)
-        return [struct.unpack_from('>I', b, offset=5) for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>I', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
     def add_predicted_observations(self, node_ids, observation_ids):
         wb = self.db.write_batch()
         for node_id, observation_id in zip(node_ids, observation_ids):
             wb.put(MemoryGraph.predicted_observations_key(node_id, observation_id), b'')
+            wb.put(MemoryGraph.predicted_nodes_key(observation_id, node_id), b'')
         wb.write()
 
 
@@ -293,19 +348,19 @@ class MemoryGraph:
     def get_predicted_nodes(self, observation_id):
         start = MemoryGraph.predicted_nodes_key(observation_id, 0)
         stop = MemoryGraph.predicted_nodes_key(observation_id, 4294967295)
-        return [struct.unpack_from('>I', b, offset=5) for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>I', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
 
     # integrated_node:[observation_id]:[node_id]
     @staticmethod
-    def integrated_nodes_key(self, observation_id, node_id):
+    def integrated_nodes_key(observation_id, node_id):
         return b'j' + struct.pack('>I', observation_id) + struct.pack('>I', node_id)
 
     # nodes that integrate observation
     def get_integrated_nodes(self, observation_id):
         start = MemoryGraph.integrated_nodes_key(observation_id, 0)
         stop = MemoryGraph.integrated_nodes_key(observation_id, 4294967295)
-        return [struct.unpack_from('>I', b, offset=5) for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>I', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
 
 
@@ -325,6 +380,7 @@ class MemoryGraph:
 
 
     def insert_adjacency(self, from_id, to_id):
+        self.save_edges([(from_id, to_id)])
         self.graph.add_edge(from_id, to_id)
 
 
@@ -443,6 +499,31 @@ class MemoryGraph:
 
         return results
 
+
+
+# Test MemoryGraph
+
+# mg = MemoryGraph("./data/testing2.db")
+# id = mg.insert_node({"f": np.zeros((512,))})
+# print("id", id)
+# node = mg.get_node(2)
+# print("node", node)
+# mg.insert_adjacency(1,2)
+# id = mg.insert_observation({"x":1.23, "y":2.34, "t":1234, "f":"test.mp4"})
+# print(id)
+# observation = mg.get_observation(id)
+# print(observation)
+# mg.close()
+# mg.add_integrated_observations([2,2,2], [14,15,16])
+# print(mg.get_integrated_observations(1))
+# print(mg.get_integrated_observations(2))
+
+# mg.add_predicted_observations([2,2,2], [14,15,16])
+# print(mg.get_predicted_observations(1))
+# print(mg.get_predicted_observations(2))
+
+# print(mg.get_integrated_nodes(14))
+# print(mg.get_predicted_nodes(14))
 
 
 def resize_frame(image):
@@ -916,4 +997,4 @@ colors = [
 
 
 #build_graph()
-play_video()
+#play_video()
