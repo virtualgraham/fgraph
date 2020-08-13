@@ -11,8 +11,8 @@ import cv2
 import hnswlib
 import networkx as nx
 
-from keras.applications import vgg16
-from keras.applications.vgg16 import preprocess_input
+from tensorflow.keras.applications import vgg16
+from tensorflow.keras.applications.vgg16 import preprocess_input
 
 
 class MemoryGraphWalker:
@@ -31,6 +31,7 @@ class MemoryGraphWalker:
     
     def add_parrelell_observations(self, t, pos, adj, feats):
         return [self.add_observation(t, pos[i], adj[i], feats[i], i) for i in range(len(feats))]
+
 
 
     def add_observation(self, t, pos, adj, feats, walker_id):

@@ -15,8 +15,8 @@ import hnswlib
 import networkx as nx
 import plyvel
 
-from keras.applications import vgg16
-from keras.applications.vgg16 import preprocess_input
+from tensorflow.keras.applications import vgg16
+from tensorflow.keras.applications.vgg16 import preprocess_input
 
 
 class MemoryGraphWalker:
@@ -33,15 +33,18 @@ class MemoryGraphWalker:
         self.predictions = dict()
 
     
-    def add_parrelell_observations(self, t, pos, adj, feats):
-        return [self.add_observation(t, pos[i], adj[i], feats[i], i) for i in range(len(feats))]
+    def add_parrelell_observations(self, file, t, pos, adj, feats):
+        return [self.add_observation(file, t, pos[i], adj[i], feats[i], i) for i in range(len(feats))]
 
 
-    def add_observation(self, t, pos, adj, feats, walker_id):
+
+    def add_observation(self, file, t, pos, adj, feats, walker_id):
 
         print("\n-----------------------\n")
         print("Walker", walker_id, adj)
         
+        observation_id = self.memory_graph.insert_observation({"file":file, "t":t, "y":pos[0], "x":pos[1]})
+
         l = d = None
 
         if self.memory_graph.index_count() >= self.knn:
@@ -68,12 +71,9 @@ class MemoryGraphWalker:
 
                 f = pred['candidate_for_similar_to_curr']["f"]
 
-                if self.memory_graph.space == 'cosine':
-                    distance = spatial.distance.cosine(feats, f)
-                else:
-                    distance = np.linalg.norm(feats-f)
-
-                if distance <= self.distance_threshold:
+                if self.memory_graph.distance(feats, f) <= self.distance_threshold:
+                    # print("add_predicted_observations", b, observation_id)
+                    self.memory_graph.add_predicted_observations([b], [observation_id])
                     accurate_predictions.add(a)
                 
                 if len(accurate_predictions) >= self.accurate_prediction_limit:
@@ -91,22 +91,24 @@ class MemoryGraphWalker:
             
             #if d is not None and sum([i < self.identical_distance for i in d]) > 3:
             if d is not None and (d[0] < self.identical_distance):
-                oid = l[0]
+                node_id = l[0]
                 print("Using Identical")
             else:
-                oid = self.memory_graph.insert_observation(t, pos[0], pos[1], feats)
+                node_id = self.memory_graph.insert_node({"f":feats})
+            
+            print("NodeID", node_id)
 
-            print("OID", oid)
+            self.memory_graph.add_integrated_observations([node_id], [observation_id])
 
             if adj:
                 if walker_id in self.last_ids and self.last_ids[walker_id] is not None :
-                    self.memory_graph.insert_adjacency(self.last_ids[walker_id], oid)
+                    self.memory_graph.insert_adjacency(self.last_ids[walker_id], node_id)
 
                 for a in accurate_predictions:
-                    self.memory_graph.insert_adjacency(a, oid)
+                    self.memory_graph.insert_adjacency(a, node_id)
         
         else:
-            oid = None
+            node_id = None
 
         # make predictions
         self.predictions[walker_id] = []
@@ -118,7 +120,7 @@ class MemoryGraphWalker:
             for n in range(self.knn):
                 label = l[n]
                 distance = d[n]
-
+                
                 if distance <= self.distance_threshold:
                     # Found a previous similar observation
 
@@ -126,14 +128,15 @@ class MemoryGraphWalker:
                     next_adjacencies = self.memory_graph.get_adjacencies(label, self.adjacency_radius)
 
                     for n in next_adjacencies:
-                        props = self.memory_graph.get_observation(n)
+                        props = self.memory_graph.get_node(n)
                         self.predictions[walker_id].append(dict(id_similar_to_prev=label, id_similar_to_curr=n, candidate_for_similar_to_curr=props))
 
                     similar += 1
 
-        self.last_ids[walker_id] = oid
 
-        return oid
+        self.last_ids[walker_id] = node_id
+
+        return node_id, observation_id
         
 
 
@@ -168,17 +171,15 @@ class MemoryGraph:
         print("MemoryGraph: loading nodes")
         nodes = self.load_all_nodes()
         for node in nodes:
-            print(node)
             self.graph.add_node(node["id"], f=node["f"])
             self.index.add_items([node["f"]], [node["id"]])
 
         print("MemoryGraph: loading edges")
         edges = self.load_all_edges()
         for from_node_id, to_node_id in edges:
-            print(from_node_id, to_node_id)
             self.graph.add_edge(from_node_id, to_node_id)
 
-        print("MemoryGraph: done")
+        print("MemoryGraph: loaded", len(nodes), "nodes,", len(edges), "edges")
 
 
     def increment_node_id(self, count):
@@ -203,22 +204,23 @@ class MemoryGraph:
     # NODES
     ######################
 
+    @staticmethod
+    def numpy_to_bytes(a):
+        return a.tobytes()
+
+    @staticmethod
+    def numpy_from_bytes(b):
+        return np.frombuffer(b, dtype=np.float32)
+
     # node:[node_id] -> [node_data]
     @staticmethod
     def encode_node(node):
-        enc_node = dict()
-        for k, v in node.items():
-            if k == "f":
-                enc_node[k] = v.tolist()
-            else:
-                enc_node[k] = v
-        j = json.dumps(enc_node)
-        return j.encode("utf-8")
+        return MemoryGraph.numpy_to_bytes(node["f"])
 
     @staticmethod
     def decode_node(k, v):
-        node = json.loads(v.decode("utf-8") )
-        node["f"] = np.array(node["f"])
+        node = dict()
+        node["f"] = MemoryGraph.numpy_from_bytes(v)
         node["id"] = struct.unpack_from('>I', k, offset=1)[0]
         return node
 
@@ -499,6 +501,11 @@ class MemoryGraph:
 
         return results
 
+    def distance(self, a, b):
+        if self.space == 'cosine':
+            return spatial.distance.cosine(a, b)
+        else:
+            return np.linalg.norm(a-b)
 
 
 # Test MemoryGraph
@@ -736,9 +743,22 @@ def show_patches(path_windows, path_features, path_positions, frame_shape, memor
 
     for i in range(len(groups)):
         group = list(groups[i])
-        windows = np.array([cv2.imread('./patches/patch'+str(nid)+'.png') for nid in group])
+        
 
-        observations = memory_graph.get_observations(group)
+        # node_ids = memory_graph.get_nodes(group)
+        
+        observation_ids = []
+        for node_id in group:
+            # print("node_id", node_id)
+            integrated_observations = memory_graph.get_integrated_observations(node_id)
+            observation_ids.extend(integrated_observations)
+            predicted_observations = memory_graph.get_predicted_observations(node_id)
+            observation_ids.extend(predicted_observations)
+
+        windows = np.array([cv2.imread('./patches/patch'+str(observation_id)+'.png') for observation_id in observation_ids])
+
+        observations = memory_graph.get_observations(observation_ids)
+
         positions = [(obs["y"], obs["x"]) for obs in observations]
 
         paint_windows(positions, windows, frame, i+1)
@@ -788,7 +808,7 @@ def play_video():
 
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
 
-    memory_graph = MemoryGraph(graph_path=graph_file, index_path=index_file, space='cosine', dim=512)
+    memory_graph = MemoryGraph(db_path, space='cosine', dim=512)
 
     model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
 
@@ -838,7 +858,7 @@ def build_graph():
     model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
 
     # memory graph
-    memory_graph = MemoryGraph(space='cosine', dim=512)
+    memory_graph = MemoryGraph(db_path, space='cosine', dim=512)
     memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.10, identical_distance=0.01)
 
 
@@ -886,24 +906,23 @@ def build_graph():
 
             print("feats.shape", feats.shape)
 
-            ids = memory_graph_walker.add_parrelell_observations(t, pos, adj, feats)
+            ids = memory_graph_walker.add_parrelell_observations(video_file_name, t, pos, adj, feats)
 
             for i in range(walker_count):
-                if ids[i] is None:
+                if ids[i][0] is None:
                     # restart walk because we are in a very predictable spot
                     g_pos[i] = None
                     pos[i] = None
                     adj[i] = False  
-                elif save_windows:
-                    cv2.imwrite('./patches/patch' + str(ids[i]) + '.png',windows[i])
+                if save_windows:
+                    cv2.imwrite('./patches/patch' + str(ids[i][1]) + '.png',windows[i])
                 
             total_frame_count+=1
 
         cap.release()
         cv2.destroyAllWindows()
 
-    memory_graph.save_graph(graph_file)
-    memory_graph.save_index(index_file)
+    memory_graph.close()
     
     print("Done")
 
@@ -919,9 +938,9 @@ runs = 1
 max_frames=30*15
 walker_count = 200
 
-video_file = './media/l8jJQA1h.mp4'
-graph_file = "./data/l8jJQA1h.pickle"
-index_file = "./data/l8jJQA1h.bin"
+video_file_name = '243_cologne_cup_ketchup_pepper_rock_shorts.mp4'
+video_file = './media/' + video_file_name
+db_path = "./data/243_cologne_cup_ketchup_pepper_rock_shorts.db"
 
 save_windows = True
 
@@ -996,5 +1015,5 @@ colors = [
 
 
 
-#build_graph()
+build_graph()
 #play_video()
