@@ -937,8 +937,8 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
 
                 print(
                     "vid", video_file_count, 
-                    "frame", t+1
-                    "res", restart_count, 
+                    "frame", t+1,
+                    "stat", restart_count, 
                     "near", near_neighbor_count,
                     "iden", is_identical_count,
                     "pred", has_predictions_count,
