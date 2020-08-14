@@ -21,4 +21,6 @@ The long term objective is an unsupervised system that if provided with unlabele
 # python -m pip install networkx
 # python -m pip install plyvel
 
+# python -m pip install matplotlib
+# python -m pip install jupyter
 ```

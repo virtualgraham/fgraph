@@ -5,7 +5,11 @@ import random
 import time
 import struct
 import os.path
+from os import listdir
+from os.path import isfile, join
 import json
+from pathlib import Path
+
 
 import numpy as np
 from scipy import spatial
@@ -142,7 +146,7 @@ class MemoryGraphWalker:
 
 class MemoryGraph:
 
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48):
+    def __init__(self, path, space='cosine', dim=512, max_elements=50000000, ef=100, M=48):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
@@ -860,67 +864,70 @@ def build_graph():
     # memory graph
     memory_graph = MemoryGraph(db_path, space='cosine', dim=512)
     memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.10, identical_distance=0.01)
-
-
-    total_frame_count = 0
     
     # for each run though the video
     for r in range(runs):
 
         print("Run", r)
 
-        # open video file for a run though
-        cap = cv2.VideoCapture(video_file)
-    
-        # walkers
-        g_pos = [None for _ in range(walker_count)]
-        pos = [None for _ in range(walker_count)]
-        adj = [False for _ in range(walker_count)]
+        video_file_count = 0
 
-        done = False
+        for video_file in video_files:
 
-        # for each frame
-        for t in range(max_frames):
-            if done:
-                break
+            video_file_count += 1
 
-            ret, frame = cap.read()
-                
-            if ret == False:
-                done = True
-                break
+            # open video file for a run though
+            cap = cv2.VideoCapture(video_dir + video_file)
 
-            frame = resize_frame(frame)
+            if save_windows:
+                Path('./patches/' + video_file).mkdir(parents=True, exist_ok=True)
 
-            kp_grid = key_point_grid(orb, frame)
+            # walkers
+            g_pos = [None for _ in range(walker_count)]
+            pos = [None for _ in range(walker_count)]
+            adj = [False for _ in range(walker_count)]
 
-            for i in range(walker_count):
-                g_pos[i], pos[i], adj[i] = next_pos(kp_grid, frame.shape, g_pos[i])
+            done = False
 
-            windows = extract_windows(frame, pos)
+            # for each frame
+            for t in range(max_frames):
+                if done:
+                    break
 
-            # extract cnn features from windows
-            preprocess_input(windows)
-            feats = model.predict(windows)
-            feats = feats.reshape((windows.shape[0], 512))
+                print("file", video_file_count, video_file)
 
-            print("feats.shape", feats.shape)
+                ret, frame = cap.read()
+                    
+                if ret == False:
+                    done = True
+                    break
 
-            ids = memory_graph_walker.add_parrelell_observations(video_file_name, t, pos, adj, feats)
+                frame = resize_frame(frame)
 
-            for i in range(walker_count):
-                if ids[i][0] is None:
-                    # restart walk because we are in a very predictable spot
-                    g_pos[i] = None
-                    pos[i] = None
-                    adj[i] = False  
-                if save_windows:
-                    cv2.imwrite('./patches/patch' + str(ids[i][1]) + '.png',windows[i])
-                
-            total_frame_count+=1
+                kp_grid = key_point_grid(orb, frame)
 
-        cap.release()
-        cv2.destroyAllWindows()
+                for i in range(walker_count):
+                    g_pos[i], pos[i], adj[i] = next_pos(kp_grid, frame.shape, g_pos[i])
+
+                windows = extract_windows(frame, pos)
+
+                # extract cnn features from windows
+                preprocess_input(windows)
+                feats = model.predict(windows)
+                feats = feats.reshape((windows.shape[0], 512))
+        
+                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats)
+
+                for i in range(walker_count):
+                    if ids[i][0] is None:
+                        # restart walk because we are in a very predictable spot
+                        g_pos[i] = None
+                        pos[i] = None
+                        adj[i] = False  
+                    if save_windows:
+                        cv2.imwrite('./patches/' + video_file + '/patch_' + str(ids[i][1]) + '.png', windows[i])
+
+            cap.release()
 
     memory_graph.close()
     
@@ -938,9 +945,11 @@ runs = 1
 max_frames=30*15
 walker_count = 200
 
-video_file_name = '243_cologne_cup_ketchup_pepper_rock_shorts.mp4'
-video_file = './media/' + video_file_name
-db_path = "./data/243_cologne_cup_ketchup_pepper_rock_shorts.db"
+video_dir = './media/Tabletop Objects/videos/'
+video_files = [f for f in listdir(video_dir) if f.endswith('.mp4') and isfile(join(video_dir, f))][:10]
+random.shuffle(video_files)
+
+db_path = "./data/tabletop_objects.db"
 
 save_windows = True
 
@@ -1015,5 +1024,5 @@ colors = [
 
 
 
-#build_graph()
-play_video()
+build_graph()
+# play_video()
