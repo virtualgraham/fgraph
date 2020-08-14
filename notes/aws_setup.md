@@ -65,14 +65,24 @@ python -m pip install ~/tensorflow-2.3.0-cp38-cp38-linux_aarch64.whl
 # python -m pip install scipy
 python -m pip install matplotlib
 python -m pip install jupyter
+python -m pip install jupyterlab
+python -m pip install ipympl
 python -m pip install scikit-build
 python -m pip install opencv-python
 python -m pip install hnswlib
 python -m pip install networkx
 python -m pip install plyvel
 
+jupyter labextension install @jupyter-widgets/jupyterlab-manager
+jupyter labextension install jupyter-matplotlib
+jupyter nbextension enable --py widgetsnbextension
+
+
 curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 sudo ./aws/install
+
+
+
 
 ```
