@@ -6,7 +6,7 @@ import time
 import struct
 import os.path
 from os import listdir
-from os.path import isfile, isdir, join
+from os.path import isfile, isdir, join, split
 import json
 from pathlib import Path
 
@@ -858,6 +858,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
         video_file_count = 0
 
         for video_file in video_files:
+            video_file_name = os.path.split(video_file)[1]
 
             video_file_count += 1
 
@@ -865,7 +866,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
             cap = cv2.VideoCapture(video_file)
 
             if save_windows:
-                Path(patch_dir + "/" + video_file).mkdir(parents=True, exist_ok=True)
+                Path(patch_dir + "/" + video_file_name).mkdir(parents=True, exist_ok=True)
 
             # walkers
             g_pos = [None for _ in range(walker_count)]
@@ -916,7 +917,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                         pos[i] = None
                         adj[i] = False  
                     if save_windows:
-                        cv2.imwrite(patch_dir  + "/" + video_file + '/patch_' + str(ids[i][1]) + '.png', windows[i])
+                        cv2.imwrite(patch_dir  + "/" + video_file_name + '/patch_' + str(ids[i][1]) + '.png', windows[i])
 
 
                     stats = ids[i][2]
@@ -938,11 +939,11 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                 print(
                     "vid", video_file_count, 
                     "frame", t+1,
-                    "stat", restart_count, 
+                    "start", restart_count, 
                     "near", near_neighbor_count,
                     "iden", is_identical_count,
                     "pred", has_predictions_count,
-                    "acc", has_accurate_predictions_count,
+                    "accu", has_accurate_predictions_count,
                     "many", has_too_many_accurate_predictions_count,
                 )
                 
