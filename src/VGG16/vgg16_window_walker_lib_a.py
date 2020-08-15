@@ -7,7 +7,7 @@ from os import listdir
 from os.path import isfile, isdir, join, split
 import json
 from pathlib import Path
-import sys
+
 
 import numpy as np
 from scipy import spatial
@@ -144,7 +144,7 @@ class MemoryGraphWalker:
 
 class MemoryGraph:
 
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000, ef=100, M=48):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
@@ -247,10 +247,6 @@ class MemoryGraph:
         wb = self.db.write_batch()
         for node_id, node in zip(node_ids, nodes):
             self.graph.add_node(node_id, f=node["f"])
-            
-            print("node[\"f\"].dtype", node["f"].dtype)
-            print("sys.getsizeof(node_id)", sys.getsizeof(node_id))
-
             self.index.add_items([node["f"]], [node_id])
             wb.put(MemoryGraph.node_key(node_id), MemoryGraph.encode_node(node))
         wb.write()
