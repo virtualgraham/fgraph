@@ -144,7 +144,7 @@ class MemoryGraphWalker:
 
 class MemoryGraph:
 
-    def __init__(self, path, space='cosine', dim=512, max_elements=15000000, ef=100, M=48):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
@@ -739,7 +739,7 @@ def show_patches(path_windows, path_features, path_positions, frame_shape, memor
 
 
 
-def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stride = 16):
+def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stride = 16, max_elements=10000000):
 
     def on_click(event, x, y, flags, param):
         if event != cv2.EVENT_LBUTTONUP:
@@ -780,7 +780,7 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
 
-    memory_graph = MemoryGraph(db_path, space='cosine', dim=512)
+    memory_graph = MemoryGraph(db_path, max_elements=max_elements, space='cosine', dim=512)
 
     model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
 
@@ -820,7 +820,7 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
 
 
-def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_frames=30*15, walker_count = 200, save_windows = True):
+def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_frames=30*15, walker_count = 200, save_windows = True, max_elements=10000000):
 
     print("Starting...")
 
@@ -837,7 +837,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
     model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
 
     # memory graph
-    memory_graph = MemoryGraph(db_path, space='cosine', dim=512)
+    memory_graph = MemoryGraph(db_path, space='cosine', dim=512, max_elements=max_elements)
     memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.10, identical_distance=0.01)
     
     # for each run though the video
