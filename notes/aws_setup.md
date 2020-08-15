@@ -10,8 +10,7 @@ sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev librea
 
 # opencv
 sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
-sudo apt-get install libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev  libdc1394-22-dev
-# libjasper-dev
+sudo apt-get install libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev  libdc1394-22-dev 
 
 #scipy
 sudo apt install libblas3 liblapack3 liblapack-dev libblas-dev
@@ -69,9 +68,10 @@ python -m pip install jupyterlab
 python -m pip install ipympl
 python -m pip install scikit-build
 python -m pip install opencv-python
-python -m pip install hnswlib
+#python -m pip install hnswlib
 python -m pip install networkx
 python -m pip install plyvel
+python -m pip install ngt
 
 jupyter labextension install @jupyter-widgets/jupyterlab-manager
 jupyter labextension install jupyter-matplotlib

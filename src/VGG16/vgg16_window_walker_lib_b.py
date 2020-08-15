@@ -7,13 +7,13 @@ from os import listdir
 from os.path import isfile, isdir, join, split
 import json
 from pathlib import Path
-import sys
+
 
 import numpy as np
 from scipy import spatial
 
 import cv2
-import hnswlib
+import faiss
 import networkx as nx
 import plyvel
 
@@ -22,7 +22,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 30, accurate_prediction_limit = 10, distance_threshold = 0.1,  adjacency_radius = 2, identical_distance=0.01):
+    def __init__(self, memory_graph, knn = 30, accurate_prediction_limit = 10, distance_threshold = 10000,  adjacency_radius = 2, identical_distance=1000):
 
         self.knn = knn
         self.accurate_prediction_limit = accurate_prediction_limit
@@ -51,7 +51,7 @@ class MemoryGraphWalker:
             d = distances[0]
 
         if d is not None:
-            #print("Nearest Neighbor", d[0])
+            print("Nearest Neighbor", d[0])
             stats["nearest_neighbor"] = d[0]
 
         accurate_predictions = set()
@@ -70,7 +70,11 @@ class MemoryGraphWalker:
 
                 f = pred['candidate_for_similar_to_curr']["f"]
 
+
+                #print("self.memory_graph.distance(feats, f)", self.memory_graph.distance(feats, f))
                 if self.memory_graph.distance(feats, f) <= self.distance_threshold:
+                    # print(f)
+                    # print(feats)
                     # print("add_predicted_observations", b, observation_id)
                     self.memory_graph.add_predicted_observations([b], [observation_id])
                     accurate_predictions.add(a)
@@ -144,7 +148,7 @@ class MemoryGraphWalker:
 
 class MemoryGraph:
 
-    def __init__(self, path, space='cosine', dim=512, max_elements=50000000, ef=100, M=48):
+    def __init__(self, path, space='l2', dim=512, max_elements=50000000, ef=100, M=48):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
@@ -164,15 +168,30 @@ class MemoryGraph:
 
         self.graph = nx.Graph()
 
-        self.index = hnswlib.Index(space=self.space, dim=self.dim)     
-        self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
-        self.index.set_ef(self.ef)
+        # self.index = hnswlib.Index(space=self.space, dim=self.dim)     
+        # self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
+        # self.index.set_ef(self.ef)
+
+        ######################
+
+        print("Starting")
+        quantizer = faiss.IndexFlatL2( 512 )
+        self.index = faiss.IndexIVFFlat( quantizer, 512, 100 )
+
+        assert not self.index.is_trained
+        print("Loading Training Data")
+        samples = np.load( "../../data/samples.npy")
+        print("Training")
+        self.index.train(samples)
+        assert self.index.is_trained
+        
+        ######################
 
         print("MemoryGraph: loading nodes")
         nodes = self.load_all_nodes()
         for node in nodes:
             self.graph.add_node(node["id"], f=node["f"])
-            self.index.add_items([node["f"]], [node["id"]])
+            self.index.add_with_ids(np.array([node["f"]]), np.array([node["id"]]))
 
         print("MemoryGraph: loading edges")
         edges = self.load_all_edges()
@@ -247,11 +266,7 @@ class MemoryGraph:
         wb = self.db.write_batch()
         for node_id, node in zip(node_ids, nodes):
             self.graph.add_node(node_id, f=node["f"])
-            
-            print("node[\"f\"].dtype", node["f"].dtype)
-            print("sys.getsizeof(node_id)", sys.getsizeof(node_id))
-
-            self.index.add_items([node["f"]], [node_id])
+            self.index.add_with_ids(np.array([node["f"]]), np.array([node_id]))
             wb.put(MemoryGraph.node_key(node_id), MemoryGraph.encode_node(node))
         wb.write()
         return node_ids
@@ -388,18 +403,29 @@ class MemoryGraph:
 
 
     def knn_query(self, feats, k=1):
-        return self.index.knn_query(feats, k)   
+        distances, labels = self.index.search(np.array(feats), k) 
+        distances = [[math.sqrt(d) for d in dis] for dis in distances]
+
+        l = labels[0][0]
+        d1 = distances[0][0]
+        f1 = feats[0]
+        f2 = self.get_node(l)["f"]
+        d2 = np.linalg.norm(f1-f2)
+        print("d1", d1, "d2", d2)
+
+        return labels, distances
 
 
     def dnn_query(self, feature, distance):
         k = 100
-        n = self.index.get_current_count()
+        n = len(self.graph)
 
         while True:
             if k > n:
                 k = n
 
-            _labels, _distances = self.index.knn_query([feature], k)  
+            _distances, _labels = self.index.search([feature], k)  
+            _distances = [[math.sqrt(d) for d in dis] for dis in _distances]
 
             labels = _labels[0]
             distances = _distances[0]
@@ -419,7 +445,7 @@ class MemoryGraph:
 
 
     def index_count(self):
-        return self.index.get_current_count()
+        return len(self.graph)
 
 
     def random_walk(self, start, l, trials):
@@ -495,7 +521,7 @@ class MemoryGraph:
                     continue
                 community_features = np.array([self.get_node(c)["f"] for c in community])
                 community_features_max = np.max(community_features, axis=0)
-                d = spatial.distance.cosine(community_features_max, features_max)
+                d = self.distance(community_features_max, features_max)
                 print("distance", d)
                 if d <= community_dis:
                     results.add(frozenset(community))
@@ -627,6 +653,7 @@ def extract_window(frame, pos, window_size):
         top_right[1] = frame.shape[1]-1
 
     return frame[bottom_left[0]:top_right[0], bottom_left[1]:top_right[1]]
+
 
 
 
@@ -784,7 +811,7 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
 
-    memory_graph = MemoryGraph(db_path, space='cosine', dim=512)
+    memory_graph = MemoryGraph(db_path, space='l2', dim=512)
 
     model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
 
@@ -823,6 +850,61 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
     cv2.destroyAllWindows() 
 
 
+def build_sample_vectors(video_path, output_path, per_frame_count, window_size, max_file_count=75):
+    print("Starting...")
+
+    if isdir(video_path):
+        video_files = [(video_path + "/" + f) for f in listdir(video_path) if f.endswith('.mp4') and isfile(join(video_path, f))][:max_file_count]
+    else:
+        video_files = [video_path]
+
+    random.shuffle(video_files)
+
+    orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
+
+    model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
+
+    video_file_count = 0
+
+    result_list = []
+
+    for video_file in video_files:
+        print(video_file)
+
+        video_file_count += 1
+
+        cap = cv2.VideoCapture(video_file)
+
+        frame_count = 0
+
+        while(cap.isOpened()):
+            frame_count += 1
+
+            print(video_file_count, frame_count)
+
+            ret, frame = cap.read()
+
+            if ret == False:
+                break
+
+            pos = [(k.pt[1],k.pt[0]) for k in random.sample(orb.detect(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), None), per_frame_count)]
+            
+            windows = extract_windows(frame, pos, window_size, len(pos))
+
+            preprocess_input(windows)
+            feats = model.predict(windows)
+            feats = feats.reshape((windows.shape[0], 512))
+
+            result_list.append(feats)
+
+    samples = np.concatenate(result_list, axis=0)
+    print("samples.shape", samples.shape)
+    np.save(output_path, samples)
+    
+    # samples2 = np.load(output_path)
+    # print("samples2.shape", samples2.shape)
+    print("Done")
+
 
 def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_frames=30*15, walker_count = 200, save_windows = True):
 
@@ -831,7 +913,9 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
     if isdir(video_path):
         video_files = [f for f in listdir(video_path) if f.endswith('.mp4') and isfile(join(video_path, f))]
     else:
-        video_files = [video_path]
+        sp = os.path.split(video_path)
+        video_files = [sp[1]]
+        video_path = sp[0]
 
     random.shuffle(video_files)
 
@@ -841,8 +925,8 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
     model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
 
     # memory graph
-    memory_graph = MemoryGraph(db_path, space='cosine', dim=512)
-    memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.10, identical_distance=0.01)
+    memory_graph = MemoryGraph(db_path, space='l2', dim=512)
+    memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 100, identical_distance=10)
     
     # for each run though the video
     for r in range(runs):
@@ -852,15 +936,14 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
         video_file_count = 0
 
         for video_file in video_files:
-            video_file_name = os.path.split(video_file)[1]
 
             video_file_count += 1
 
             # open video file for a run though
-            cap = cv2.VideoCapture(video_file)
+            cap = cv2.VideoCapture(join(video_path, video_file))
 
             if save_windows:
-                Path(patch_dir + "/" + video_file_name).mkdir(parents=True, exist_ok=True)
+                Path(join(patch_dir, video_file)).mkdir(parents=True, exist_ok=True)
 
             # walkers
             g_pos = [None for _ in range(walker_count)]
@@ -911,7 +994,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                         pos[i] = None
                         adj[i] = False  
                     if save_windows:
-                        cv2.imwrite(patch_dir  + "/" + video_file_name + '/patch_' + str(ids[i][1]) + '.png', windows[i])
+                        cv2.imwrite(join(patch_dir, video_file, 'patch_' + str(ids[i][1]) + '.png'), windows[i])
 
 
                     stats = ids[i][2]
