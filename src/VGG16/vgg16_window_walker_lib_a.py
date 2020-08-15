@@ -144,7 +144,7 @@ class MemoryGraphWalker:
 
 class MemoryGraph:
 
-    def __init__(self, path, space='cosine', dim=512, max_elements=15000000, ef=100, M=48):
+    def __init__(self, path, space='cosine', dim=512, max_elements=10000000, ef=100, M=48):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
