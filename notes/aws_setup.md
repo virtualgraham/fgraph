@@ -68,10 +68,9 @@ python -m pip install jupyterlab
 python -m pip install ipympl
 python -m pip install scikit-build
 python -m pip install opencv-python
-#python -m pip install hnswlib
+python -m pip install hnswlib
 python -m pip install networkx
 python -m pip install plyvel
-python -m pip install ngt
 
 jupyter labextension install @jupyter-widgets/jupyterlab-manager
 jupyter labextension install jupyter-matplotlib

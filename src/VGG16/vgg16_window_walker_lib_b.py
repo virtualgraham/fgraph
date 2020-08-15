@@ -4,10 +4,9 @@ import time
 import struct
 import os.path
 from os import listdir
-from os.path import isfile, isdir, join, split
+from os.path import isfile, isdir, join, split, splitext
 import json
 from pathlib import Path
-
 
 import numpy as np
 from scipy import spatial
@@ -153,7 +152,12 @@ class MemoryGraph:
         self.path = path
         self.open()
 
+    def save(self):
+        index_path = os.path.splitext(path)[0] + ".index"
+        self.index.save_index(index_path)
+
     def close(self):
+        self.save()
         self.db.close()
         self.graph = None
         self.index = None
@@ -164,15 +168,19 @@ class MemoryGraph:
 
         self.graph = nx.Graph()
 
-        self.index = hnswlib.Index(space=self.space, dim=self.dim)     
-        self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
+        index_path = os.path.splitext(path)[0] + ".index"
+        self.index = hnswlib.Index(space=self.space, dim=self.dim) 
+        if os.path.isfile(index_path):
+            self.index.load_index(index_path)
+        else:
+            self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
         self.index.set_ef(self.ef)
 
-        print("MemoryGraph: loading nodes")
-        nodes = self.load_all_nodes()
-        for node in nodes:
-            self.graph.add_node(node["id"], f=node["f"])
-            self.index.add_items([node["f"]], [node["id"]])
+        # print("MemoryGraph: loading nodes")
+        # nodes = self.load_all_nodes()
+        # for node in nodes:
+        #     self.graph.add_node(node["id"], f=node["f"])
+        #     self.index.add_items([node["f"]], [node["id"]])
 
         print("MemoryGraph: loading edges")
         edges = self.load_all_edges()
@@ -229,27 +237,24 @@ class MemoryGraph:
         return b'n' + struct.pack('>I', node_id)
 
     def get_node(self, node_id):
-        return self.graph.nodes[node_id]
+        return self.get_node(node_id)[0]
 
     def insert_node(self, node):
         return self.insert_nodes([node])[0]
 
-    def load_all_nodes(self):
-        start = MemoryGraph.node_key(0)
-        stop = MemoryGraph.node_key(4294967295)
-        return [MemoryGraph.decode_node(key, value) for key, value in self.db.iterator(start=start, stop=stop)]
+    # def load_all_nodes(self):
+    #     start = MemoryGraph.node_key(0)
+    #     stop = MemoryGraph.node_key(4294967295)
+    #     return [MemoryGraph.decode_node(key, value) for key, value in self.db.iterator(start=start, stop=stop)]
 
     def get_nodes(self, node_ids):
-        return [self.get_node(node_id) for node_id in node_ids]
+        return [{"f":f} for f in self.index.get_items(node_ids)]
 
     def insert_nodes(self, nodes):
         node_ids = self.increment_node_id(len(nodes))
-        wb = self.db.write_batch()
-        for node_id, node in zip(node_ids, nodes):
-            self.graph.add_node(node_id, f=node["f"])
-            self.index.add_items([node["f"]], [node_id])
-            wb.put(MemoryGraph.node_key(node_id), MemoryGraph.encode_node(node))
-        wb.write()
+        self.index.add_items(nodes, node_ids)
+        for node_id node_ids:
+            self.graph.add_node(node_id)
         return node_ids
 
 
