@@ -100,14 +100,17 @@ class MemoryGraphWalker:
             #print("NodeID", node_id)
 
             self.memory_graph.add_integrated_observations([node_id], [observation_id])
-
+    
+            stats["adjacencies_inserted"] = 0
             if adj:
                 if walker_id in self.last_ids and self.last_ids[walker_id] is not None :
+                    stats["adjacencies_inserted"] += 1
                     self.memory_graph.insert_adjacency(self.last_ids[walker_id], node_id)
 
                 for a in accurate_predictions:
+                    stats["adjacencies_inserted"] += 1
                     self.memory_graph.insert_adjacency(a, node_id)
-        
+            
         else:
             node_id = None
 
@@ -155,6 +158,7 @@ class MemoryGraph:
     def save(self):
         print("Saving Index")
         index_path = os.path.splitext(self.path)[0] + ".index"
+        print("index_path", index_path)
         self.index.save_index(index_path)
         print("Index Saved")
 
@@ -167,14 +171,15 @@ class MemoryGraph:
 
     def open(self):
         self.db = plyvel.DB(self.path, create_if_missing=True)
-    
-        print("MemoryGraph: loading index")
         
         index_path = os.path.splitext(self.path)[0] + ".index"
+        print("index_path", index_path)
         self.index = hnswlib.Index(space=self.space, dim=self.dim) 
         if os.path.isfile(index_path):
+            print("MemoryGraph: loading index")
             self.index.load_index(index_path)
         else:
+            print("MemoryGraph: creating index")
             self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
         self.index.set_ef(self.ef)
 
@@ -185,7 +190,7 @@ class MemoryGraph:
         for from_node_id, to_node_id in edges:
             self.graph.add_edge(from_node_id, to_node_id)
 
-        print("MemoryGraph: loaded", self.index.get_current_count(), "nodes,", len(self.graph), "edges")
+        print("MemoryGraph: loaded", self.index.get_current_count(), "nodes", self.graph.number_of_edges(), "edges")
 
 
     def increment_node_id(self, count):
@@ -823,18 +828,20 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
 
 
-def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_frames=30*15, walker_count = 200, save_windows = True, max_elements=10000000):
+def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_files=None, max_frames=30*30, walker_count = 200, save_windows = True, max_elements=10000000):
 
     print("Starting...")
 
     if isdir(video_path):
         video_files = [f for f in listdir(video_path) if f.endswith('.mp4') and isfile(join(video_path, f))]
+        random.shuffle(video_files)
+        if max_files is not None:
+            video_files = video_files[:max_files]
     else:
         sp = os.path.split(video_path)
         video_files = [sp[1]]
         video_path = sp[0]
 
-    random.shuffle(video_files)
 
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
 
@@ -902,7 +909,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                 has_predictions_count = 0
                 has_accurate_predictions_count = 0
                 has_too_many_accurate_predictions_count = 0
-                
+                adjacencies_inserted = 0
 
                 for i in range(walker_count):
                     if ids[i][0] is None:
@@ -929,7 +936,9 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                             has_too_many_accurate_predictions_count += 1
                     if "identical" in stats and stats["identical"]:
                         is_identical_count += 1
-
+                    if "adjacencies_inserted" in stats:
+                        adjacencies_inserted += stats["adjacencies_inserted"]
+                        
                 print(
                     "vid", video_file_count, 
                     "frame", t+1,
@@ -939,6 +948,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                     "pred", has_predictions_count,
                     "accu", has_accurate_predictions_count,
                     "many", has_too_many_accurate_predictions_count,
+                    "adj", adjacencies_inserted,
                 )
                 
             cap.release()
