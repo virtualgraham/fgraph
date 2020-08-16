@@ -153,8 +153,10 @@ class MemoryGraph:
         self.open()
 
     def save(self):
-        index_path = os.path.splitext(path)[0] + ".index"
+        print("Saving Index")
+        index_path = os.path.splitext(self.path)[0] + ".index"
         self.index.save_index(index_path)
+        print("Index Saved")
 
     def close(self):
         self.save()
@@ -165,9 +167,9 @@ class MemoryGraph:
 
     def open(self):
         self.db = plyvel.DB(self.path, create_if_missing=True)
-
-        self.graph = nx.Graph()
-
+    
+        print("MemoryGraph: loading index")
+        
         index_path = os.path.splitext(self.path)[0] + ".index"
         self.index = hnswlib.Index(space=self.space, dim=self.dim) 
         if os.path.isfile(index_path):
@@ -176,13 +178,9 @@ class MemoryGraph:
             self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
         self.index.set_ef(self.ef)
 
-        # print("MemoryGraph: loading nodes")
-        # nodes = self.load_all_nodes()
-        # for node in nodes:
-        #     self.graph.add_node(node["id"], f=node["f"])
-        #     self.index.add_items([node["f"]], [node["id"]])
-
-        print("MemoryGraph: loading edges")
+        print("MemoryGraph: loading graph")
+        
+        self.graph = nx.Graph()
         edges = self.load_all_edges()
         for from_node_id, to_node_id in edges:
             self.graph.add_edge(from_node_id, to_node_id)
