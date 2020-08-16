@@ -168,7 +168,7 @@ class MemoryGraph:
 
         self.graph = nx.Graph()
 
-        index_path = os.path.splitext(path)[0] + ".index"
+        index_path = os.path.splitext(self.path)[0] + ".index"
         self.index = hnswlib.Index(space=self.space, dim=self.dim) 
         if os.path.isfile(index_path):
             self.index.load_index(index_path)
@@ -187,7 +187,7 @@ class MemoryGraph:
         for from_node_id, to_node_id in edges:
             self.graph.add_edge(from_node_id, to_node_id)
 
-        print("MemoryGraph: loaded", len(nodes), "nodes,", len(edges), "edges")
+        print("MemoryGraph: loaded", self.index.get_current_count(), "nodes,", len(self.graph), "edges")
 
 
     def increment_node_id(self, count):
@@ -237,7 +237,7 @@ class MemoryGraph:
         return b'n' + struct.pack('>I', node_id)
 
     def get_node(self, node_id):
-        return self.get_node(node_id)[0]
+        return self.get_nodes([node_id])[0]
 
     def insert_node(self, node):
         return self.insert_nodes([node])[0]
@@ -252,8 +252,8 @@ class MemoryGraph:
 
     def insert_nodes(self, nodes):
         node_ids = self.increment_node_id(len(nodes))
-        self.index.add_items(nodes, node_ids)
-        for node_id node_ids:
+        self.index.add_items([n["f"] for n in nodes], node_ids)
+        for node_id in node_ids:
             self.graph.add_node(node_id)
         return node_ids
 
