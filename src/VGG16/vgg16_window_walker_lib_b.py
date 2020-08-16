@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy import spatial
-
+from sklearn import preprocessing
 import cv2
 import hnswlib
 import networkx as nx
@@ -67,8 +67,10 @@ class MemoryGraphWalker:
                 if b in evaluated_ids:
                     continue
 
+                # these features come from the index and are normalized
                 f = pred['candidate_for_similar_to_curr']["f"]
 
+                # TODO: normalize feats before calling distance
                 if self.memory_graph.distance(feats, f) <= self.distance_threshold:
                     # print("add_predicted_observations", b, observation_id)
                     self.memory_graph.add_predicted_observations([b], [observation_id])
@@ -503,7 +505,8 @@ class MemoryGraph:
 
     def distance(self, a, b):
         if self.space == 'cosine':
-            return spatial.distance.cosine(a, b)
+            n = preprocessing.normalize([a, b])
+            return spatial.distance.cosine(n[0], n[1])
         else:
             return np.linalg.norm(a-b)
 
