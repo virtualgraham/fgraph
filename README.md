@@ -1,4 +1,4 @@
-# Patch Graph
+# fGraph
 
 Experiments with graphs of spatial temporal relationships of CNN features in video scenes
 
