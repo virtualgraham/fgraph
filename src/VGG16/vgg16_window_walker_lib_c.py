@@ -7,6 +7,7 @@ from os import listdir
 from os.path import isfile, isdir, join, split, splitext
 import json
 from pathlib import Path
+import threading
 
 import numpy as np
 import cv2
@@ -16,6 +17,9 @@ import plyvel
 
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
+
+
+
 
 class MemoryGraphWalker:
     def __init__(self, memory_graph, knn = 100, accurate_prediction_limit = 10, distance_threshold = 0.1,  adjacency_radius = 2, identical_distance=0.01):
@@ -31,30 +35,35 @@ class MemoryGraphWalker:
         self.predictions = dict()
 
 
-    def add_parrelell_observations(self, file, t, pos, adj, feats):
-        return [self.add_observation(file, t, pos[i], adj[i], feats[i], i) for i in range(len(feats))]
+    def add_parrelell_observations(self, file, t, pos, adj, feats, keep_times=False):
+        if self.memory_graph.index_count() >= self.knn:
+            labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
+        else:
+            labels = [None for i in range(len(feats))]
+            distances = [None for i in range(len(feats))]
+
+        return [self._add_observation(file, t, pos[i], adj[i], feats[i], labels[i], distances[i], i, keep_times) for i in range(len(feats))]
 
 
-    def add_observation(self, file, t, pos, adj, feats, walker_id):
+    def add_observation(self, file, t, pos, adj, feats, walker_id, keep_times=False):
+        if self.memory_graph.index_count() >= self.knn:
+            labels, distances = self.memory_graph.knn_query([feats], k = self.knn)
+
+        return self._add_observation(file, t, pos, adj, feats, labels[0], distances[0], i, keep_times=keep_times)
+        
+
+    # TODO: should be parallelizable
+    def _add_observation(self, file, t, pos, adj, feats, labels, distances, walker_id, keep_times=False):
  
-        stats = {"adj":adj, "time": dict()}
+        stats = {"adj":adj}
 
-        ns1 = time.time_ns()
+        tm = TimeMarker(enabled=keep_times)
 
         observation_id = self.memory_graph.insert_observation({"file":file, "t":t, "y":pos[0], "x":pos[1]})
 
-        ns2 = time.time_ns()
-        stats["time"]["insert_observation"] = ns2-ns1
-
-        labels = distances = None
-
-        if self.memory_graph.index_count() >= self.knn:
-            _labels, _distances = self.memory_graph.knn_query([feats], k = self.knn)
-            labels = _labels[0]
-            distances = _distances[0]
-
-        ns3 = time.time_ns()
-        stats["time"]["knn_query"] = ns3-ns2
+        tm.mark(s="insert_observation")
+        
+        tm.mark(l="find_correct_predictions", s="knn_query")
 
         has_near_neighbor = False
         if distances is not None:
@@ -67,18 +76,9 @@ class MemoryGraphWalker:
 
         # find correct predictions and reinforce with adjacency
 
-        stats["time"]["distance_found"] = 0
-        stats["time"]["distance_not_found"] = 0
-        stats["time"]["add_predicted_observations"] = 0
-        stats["time"]["before_distance"] = 0
-        stats["time"]["after_add_predicted_observations"] = 0
-        stats["time"]["add_evaluated_ids"] = 0
-        stats["time"]["find_correct_predictions_inside"] = 0
-
-
         if adj and walker_id in self.predictions and has_near_neighbor:
 
-            ns3_5 = time.time_ns()
+            tm.mark(l="find_correct_predictions_inside")
 
             predictions = self.predictions[walker_id]
             
@@ -88,10 +88,9 @@ class MemoryGraphWalker:
             #     stats["nearest_neighbor"]
             #     print("No neighbors in threshold distance")
             
-  
             for pred in predictions:
 
-                ns4 = time.time_ns()
+                tm.mark()
 
                 a = pred["id_similar_to_prev"]
                 b = pred["id_similar_to_curr"]
@@ -102,24 +101,19 @@ class MemoryGraphWalker:
                 # these features come from the index and are normalized
                 # f = pred['candidate_for_similar_to_curr']["f"]
 
-                ns5 = time.time_ns()
-                stats["time"]["before_distance"] += (ns5 - ns4)
+                tm.mark(l="distance", a="before_distance")
                 
                 if b in labels_set:
-                    ns6 = time.time_ns()
-                    stats["time"]["distance_found"] += (ns6 - ns5)
+                    tm.mark(a="distance_found")
                     # print("add_predicted_observations", b, observation_id)
                     self.memory_graph.add_predicted_observations([b], [observation_id])
-                    ns7 = time.time_ns()
-                    stats["time"]["add_predicted_observations"] += (ns7 - ns6)
+                    tm.mark(a="add_predicted_observations")
                     accurate_predictions.add(a)
-                    ns8 = time.time_ns()
-                    stats["time"]["after_add_predicted_observations"] += (ns8 - ns7)
+                    tm.mark(a="after_add_predicted_observations")
                 else:
-                    ns6 = time.time_ns()
-                    stats["time"]["distance_not_found"] += (ns6 - ns5)
+                    tm.mark(i="distance", a="distance_not_found")
 
-                ns9 = time.time_ns()
+                tm.mark()
 
                 if len(accurate_predictions) >= self.accurate_prediction_limit:
                     # print("Too many accurate_predictions")
@@ -127,24 +121,17 @@ class MemoryGraphWalker:
 
                 evaluated_ids.add(b)
 
-                ns10 = time.time_ns()
-                stats["time"]["add_evaluated_ids"] += (ns10 - ns9)
-
-        
+                tm.mark(a="add_evaluated_ids")
 
             if len(predictions) > 0:
                 stats["predictions"] = len(predictions)
                 stats["accurate_predictions"] = len(accurate_predictions)
                 # print("Predictions", len(accurate_predictions), "of", len(predictions))
         
-            ns3_7 = time.time_ns()
-            stats["time"]["find_correct_predictions_inside"] = (ns3_7-ns3_5)
+            tm.mark(si="find_correct_predictions_inside")
 
         # print("frame", t, pos)
-        ns11 = time.time_ns()
-        stats["time"]["find_correct_predictions"] = (ns11-ns3)
-
-
+        tm.mark(si="find_correct_predictions")
 
         if len(accurate_predictions) < self.accurate_prediction_limit:
             
@@ -173,8 +160,7 @@ class MemoryGraphWalker:
         else:
             node_id = None
 
-        ns12 = time.time_ns()
-        stats["time"]["insert_node_and_adjacencies"] = ns12-ns11
+        tm.mark(s="insert_node_and_adjacencies")
 
         # make predictions
         self.predictions[walker_id] = []
@@ -198,9 +184,10 @@ class MemoryGraphWalker:
 
                     similar += 1
 
+        tm.mark(s="make_predictions")
 
-        ns13 = time.time_ns()
-        stats["time"]["make_predictions"] = ns13-ns12
+        if keep_times:
+            stats["time"] = tm.saved
 
         self.last_ids[walker_id] = node_id
 
@@ -218,8 +205,11 @@ class MemoryGraph:
         self.M = M
         self.path = path
         self.open()
+        self.node_id_lock = threading.Lock() # hopefully temporary
+        self.observation_id_lock = threading.Lock() # hopefully temporary
 
     def save(self):
+        self.save_keys() # hopefully temporary
         print("Saving Index")
         index_path = os.path.splitext(self.path)[0] + ".index"
         print("index_path", index_path)
@@ -235,7 +225,8 @@ class MemoryGraph:
 
     def open(self):
         self.db = plyvel.DB(self.path, create_if_missing=True)
-        
+        self.load_keys() # hopefully temporary
+
         index_path = os.path.splitext(self.path)[0] + ".index"
         print("index_path", index_path)
         self.index = hnswlib.Index(space=self.space, dim=self.dim) 
@@ -257,22 +248,57 @@ class MemoryGraph:
         print("MemoryGraph: loaded", self.index.get_current_count(), "nodes", self.graph.number_of_edges(), "edges")
 
 
-    def increment_node_id(self, count):
-        return self.increment_id(count, b'd:n')
+    #######################################################
+    # This is a terrible method, need a transactional db probably
 
-    def increment_observation_id(self, count):
-        return self.increment_id(count, b'd:o')
-
-    def increment_id(self, count, key):
+    def read_key(self, key):
         b = self.db.get(key)
         if b is None:
-            node_id = count
+            return 0
         else:
-            node_id = struct.unpack('>I', b)[0]
-            node_id += count
-        b = struct.pack('>I', node_id)
-        self.db.put(key, b)
+            return struct.unpack('>I', b)[0]
+
+    def write_key(self, key, value):
+        self.db.put(key, struct.pack('>I', value))
+
+    def load_keys(self):
+        self.node_id = self.read_key(b'd:n')
+        self.observation_id = self.read_key(b'd:o')
+
+    def save_keys(self):
+        self.write_key(b'd:n', self.node_id)
+        self.write_key(b'd:o', self.observation_id)
+
+    def increment_node_id(self, count):
+        with self.node_id_lock:
+            self.node_id += count
+            node_id = self.node_id
         return list(range(node_id-count+1, node_id+1))
+
+    def increment_observation_id(self, count):
+        with self.observation_id_lock:
+            self.observation_id += count
+            observation_id = self.observation_id
+        return list(range(observation_id-count+1, observation_id+1))
+
+    # def increment_node_id(self, count):
+    #     return self.increment_id(count, b'd:n')
+
+    # def increment_observation_id(self, count):
+    #     return self.increment_id(count, b'd:o')
+
+    # # TODO: should be parallelizable safe (plyvel)
+    # def increment_id(self, count, key):
+    #     b = self.db.get(key)
+    #     if b is None:
+    #         node_id = count
+    #     else:
+    #         node_id = struct.unpack('>I', b)[0]
+    #         node_id += count
+    #     b = struct.pack('>I', node_id)
+    #     self.db.put(key, b)
+    #     return list(range(node_id-count+1, node_id+1))
+    ######################################################
 
 
     ######################
@@ -317,6 +343,7 @@ class MemoryGraph:
     def get_nodes(self, node_ids):
         return [{"f":f} for f in self.index.get_items(node_ids)]
 
+    # TODO: should be parallelizable safe (hnswlib, networkx)
     def insert_nodes(self, nodes):
         node_ids = self.increment_node_id(len(nodes))
         self.index.add_items([n["f"] for n in nodes], node_ids)
@@ -333,6 +360,7 @@ class MemoryGraph:
     def edge_key(edge):
         return b'e' + struct.pack('>I', edge[0]) + struct.pack('>I', edge[1])
 
+    # TODO: should be parallelizable safe (plyvel)
     def save_edges(self, edges):
         wb = self.db.write_batch()
         for from_node_id, to_node_id in edges:
@@ -365,6 +393,7 @@ class MemoryGraph:
     def get_observations(self, observation_ids):
         return [self.get_observation(observation_id) for observation_id in observation_ids]
 
+    # TODO: should be parallelizable safe (plyvel)
     def insert_observations(self, observations):
         observation_ids = self.increment_observation_id(len(observations))
         wb = self.db.write_batch()
@@ -386,6 +415,7 @@ class MemoryGraph:
         stop = MemoryGraph.integrated_observations_key(node_id, 4294967295)
         return [struct.unpack_from('>I', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
+    # TODO: should be parallelizable safe (plyvel)
     def add_integrated_observations(self, node_ids, observation_ids):
         wb = self.db.write_batch()
         for node_id, observation_id in zip(node_ids, observation_ids):
@@ -405,6 +435,7 @@ class MemoryGraph:
         stop = MemoryGraph.predicted_observations_key(node_id, 4294967295)
         return [struct.unpack_from('>I', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
+    # TODO: should be parallelizable safe (plyvel)
     def add_predicted_observations(self, node_ids, observation_ids):
         wb = self.db.write_batch()
         for node_id, observation_id in zip(node_ids, observation_ids):
@@ -436,7 +467,7 @@ class MemoryGraph:
         stop = MemoryGraph.integrated_nodes_key(observation_id, 4294967295)
         return [struct.unpack_from('>I', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
-
+    # TODO: should be parallelizable safe (networkx)
     def get_adjacencies(self, node_id, radius):
         return self._neighbors(node_id, radius)
         
@@ -449,19 +480,20 @@ class MemoryGraph:
                 result.update(self._neighbors(w, radius, depth+1))
         return result
 
-
+    # TODO: should be parallelizable safe (networkx)
     def insert_adjacency(self, from_id, to_id):
         self.save_edges([(from_id, to_id)])
         self.graph.add_edge(from_id, to_id)
 
 
+    # TODO: should be parallelizable safe (hnswlib)
     def knn_query(self, feats, k=1):
         return self.index.knn_query(feats, k)   
 
-
-
+    # TODO: should be parallelizable safe (hnswlib)
     def index_count(self):
-        return self.index.get_current_count()
+        return len(self.graph)
+        # return self.index.get_current_count()
 
 
     def random_walk(self, start, l, trials):
@@ -869,11 +901,11 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
 
 
-def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_files=None, max_frames=30*30, walker_count = 200, save_windows = True, max_elements=10000000, print_times=False):
+def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_files=None, max_frames=30*30, walker_count = 200, save_windows = True, max_elements=10000000, keep_times=False):
 
     print("Starting...")
 
-    ns1 = time.time_ns()
+    t1 = TimeMarker(enabled=keep_times)
 
     if isdir(video_path):
         video_files = [f for f in listdir(video_path) if f.endswith('.mp4') and isfile(join(video_path, f))]
@@ -885,26 +917,22 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
         video_files = [sp[1]]
         video_path = sp[0]
 
-    ns2 = time.time_ns()
-    if print_times: print("TIME video file paths", ns2-ns1)
+    t1.mark(p="TIME video file paths")
 
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
 
-    ns3 = time.time_ns()
-    if print_times: print("TIME init orb", ns2-ns3)
+    t1.mark(p="TIME init orb")
 
     # initialize VGG16
     model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
 
-    ns4 = time.time_ns()
-    if print_times: print("TIME init VGG16", ns3-ns4)
+    t1.mark(p="TIME init VGG16")
 
     # memory graph
     memory_graph = MemoryGraph(db_path, space='cosine', dim=512, max_elements=max_elements)
     memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.10, identical_distance=0.01)
     
-    ns5 = time.time_ns()
-    if print_times: print("TIME init Memory Graph", ns4-ns5)
+    t1.mark(p="TIME init Memory Graph")
 
     # for each run though the video
     for r in range(runs):
@@ -915,7 +943,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
 
         for video_file in video_files:
             
-            ns6 = time.time_ns()
+            t2 = TimeMarker(enabled=keep_times)
 
             video_file_count += 1
 
@@ -932,20 +960,18 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
 
             done = False
 
-            ns7 = time.time_ns()
-            if print_times: print("TIME open video", ns7-ns6)
+            t2.mark(p="TIME open video")
 
             # for each frame
             for t in range(max_frames):
                 if done:
                     break
 
-                ns8 = time.time_ns()
+                t3 = TimeMarker(enabled=keep_times)
 
                 ret, frame = cap.read()
-                    
-                ns9 = time.time_ns()
-                if print_times: print("TIME read video frame", ns9-ns8)
+                
+                t3.mark(p="TIME read video frame")
 
                 if ret == False:
                     done = True
@@ -953,37 +979,31 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
 
                 frame = resize_frame(frame)
 
-                ns10 = time.time_ns()
-                if print_times: print("TIME resize_frame", ns10-ns9)
+                t3.mark(p="TIME resize_frame")
 
                 kp_grid = key_point_grid(orb, frame, stride)
 
-                ns11 = time.time_ns()
-                if print_times: print("TIME key_point_grid", ns11-ns10)
+                t3.mark(p="TIME key_point_grid")
 
                 for i in range(walker_count):
                     g_pos[i], pos[i], adj[i] = next_pos(kp_grid, frame.shape, g_pos[i], walk_length, stride)
 
-                ns12 = time.time_ns()
-                if print_times: print("TIME walker_count x next_pos", ns12-ns11)
+                t3.mark(p="TIME walker_count x next_pos")
 
                 windows = extract_windows(frame, pos, window_size, walker_count)
 
-                ns13 = time.time_ns()
-                if print_times: print("TIME extract_windows", ns13-ns12)
+                t3.mark(p="TIME extract_windows")
 
                 # extract cnn features from windows
                 preprocess_input(windows)
                 feats = model.predict(windows)
                 feats = feats.reshape((windows.shape[0], 512))
         
-                ns14 = time.time_ns()
-                if print_times: print("TIME preprocess_input + model.predict", ns14-ns13)
+                t3.mark(p="TIME preprocess_input + model.predict")
 
-                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats)
+                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, keep_times)
 
-                ns15 = time.time_ns()
-                if print_times: print("TIME add_parrelell_observations", ns15-ns14)
+                t3.mark(p="TIME add_parrelell_observations")
 
                 restart_count = 0
                 near_neighbor_count = 0
@@ -1023,17 +1043,16 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                     if "adjacencies_inserted" in stats:
                         adjacencies_inserted += stats["adjacencies_inserted"]
                     
-                    if print_times:
+                    if keep_times:
                         for k, v in stats["time"].items():
                             if k not in time_stats:
                                 time_stats[k] = v
                             else:
                                 time_stats[k] += v
 
-                ns16 = time.time_ns()
-                if print_times: print("TIME write patches + compute stats", ns16-ns15)
+                t3.mark(p="TIME write patches + compute stats")
 
-                if print_times:
+                if keep_times:
                     print(time_stats)
 
                 print(
@@ -1049,6 +1068,9 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                 )
                 
             cap.release()
+
+            if r < (runs-1):
+                memory_graph.save()
 
     memory_graph.close()
     
@@ -1066,3 +1088,57 @@ colors = [
     (189, 211, 147), (229, 111, 254), (222, 255, 116), (0, 255, 120), (0, 155, 255), (0, 100, 1), (0, 118, 255), 
     (133, 169, 0), (0, 185, 23), (120, 130, 49), (0, 255, 198), (255, 110, 65), (232, 94, 190), (0, 0, 0)
 ]
+
+
+# utility for working with marks and intervals
+# a mark is a nanosecond timestamp returned from time.time_ns()
+# an interval is time elapsed between two marks
+class TimeMarker:
+    def __init__(self, enabled=True, l="start"):
+        self.enabled = enabled
+        if enabled:
+            self.last = time.time_ns()
+            self.mark_dict = {l: self.last}
+            self.saved = {}
+
+    # sets a new time mark and calculates the interval from the new time mark to a previous time mark
+    # l: give this mark a label to be used later
+    # i: calculate the interval since a labeled mark instead of using simply the last mark
+    # s: save the interval in a dict with this name
+    # a: add this interval to the value in saved dict 
+    # p: print the interval with the given text
+    # si: a shortcut to set s and i to the same value
+    def mark(self, l=None, i=None, s=None, a=None, p=None, si=None):
+        if not self.enabled:
+            return 0
+
+        if si is not None:
+            s = si
+            i = si
+
+        t = time.time_ns()
+        
+        if l is not None:
+            self.mark_dict[l] = t
+        
+        if i is not None:
+            r = t - self.mark_dict[i]     
+        else:
+            r = t - self.last
+
+        self.last = t
+
+        if s is not None:
+            self.saved[s] = r
+        elif a is not None:
+            if a not in self.saved:
+                self.saved[a] = r
+            else:
+                self.saved[a] += r
+        if p is not None:
+            print(p, r)
+
+        return r
+
+
+    
