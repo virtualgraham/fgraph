@@ -197,8 +197,8 @@ class MemoryGraphWalker:
 MAX_KEY_VALUE = 18446744073709551615
 
 class MemoryGraph:
-
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
+    #def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=1000, M=64, rebuild_index=False):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
@@ -968,6 +968,8 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
     
     t1.mark(p="TIME init Memory Graph")
 
+    visited_videos = set()
+
     # for each run though the video
     for r in range(runs):
 
@@ -979,6 +981,8 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
             
             print(video_file)
             
+            visited_videos.add(video_file)
+
             t2 = TimeMarker(enabled=keep_times)
 
             video_file_count += 1
@@ -1105,6 +1109,8 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
 
     memory_graph.close()
     
+    print(visited_videos)
+
     print("Done")
 
     
