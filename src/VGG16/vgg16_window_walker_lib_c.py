@@ -35,31 +35,31 @@ class MemoryGraphWalker:
         self.predictions = dict()
 
 
-    def add_parrelell_observations(self, file, t, pos, adj, feats, keep_times=False):
+    def add_parrelell_observations(self, file, t, pos, adj, feats, patches, keep_times=False):
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
         else:
             labels = [None for i in range(len(feats))]
             distances = [None for i in range(len(feats))]
 
-        return [self._add_observation(file, t, pos[i], adj[i], feats[i], labels[i], distances[i], i, keep_times) for i in range(len(feats))]
+        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], labels[i], distances[i], i, keep_times) for i in range(len(feats))]
 
 
-    def add_observation(self, file, t, pos, adj, feats, walker_id, keep_times=False):
+    def add_observation(self, file, t, pos, adj, feats, patch, walker_id, keep_times=False):
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query([feats], k = self.knn)
 
-        return self._add_observation(file, t, pos, adj, feats, labels[0], distances[0], i, keep_times=keep_times)
+        return self._add_observation(file, t, pos, adj, feats, patch, labels[0], distances[0], i, keep_times=keep_times)
         
 
     # TODO: should be parallelizable
-    def _add_observation(self, file, t, pos, adj, feats, labels, distances, walker_id, keep_times=False):
+    def _add_observation(self, file, t, pos, adj, feats, patch, labels, distances, walker_id, keep_times=False):
  
         stats = {"adj":adj}
 
         tm = TimeMarker(enabled=keep_times)
 
-        observation_id = self.memory_graph.insert_observation({"file":file, "t":t, "y":pos[0], "x":pos[1]})
+        observation_id = self.memory_graph.insert_observation({"file":file, "t":t, "y":pos[0], "x":pos[1], "patch":patch})
 
         tm.mark(s="insert_observation")
         
@@ -359,6 +359,29 @@ class MemoryGraph:
     ######################
     # OBSERVATIONS
     ######################
+    # {"file":file, "t":t, "y":y, "x":x, "patch":patch}
+
+    @staticmethod
+    def encode_observation(observation):
+        bt = struct.pack('>I', observation["t"]) # 4 bytes
+        by = struct.pack('>d', observation["y"]) # 8 bytes
+        bx = struct.pack('>d', observation["x"]) # 8 bytes
+        bpatch = observation["patch"].tobytes() # 3072 bytes
+        bfile = observation["file"].encode()
+        return bt + by + bx + bpatch + bfile
+
+
+    @staticmethod
+    def decode_observation(b):
+        observation = dict()
+        # (32, 32, 3) uint8
+        observation["t"] = struct.unpack_from('>I', b, offset=0)[0]
+        observation["y"] = struct.unpack_from('>d', b, offset=4)[0]
+        observation["x"] = struct.unpack_from('>d', b, offset=12)[0]
+        observation["patch"] = np.frombuffer(b[20:3092], dtype=np.uint8).reshape(32, 32, 3)
+        observation["file"] = b[3092:].decode()
+        return observation
+
 
     # obs:[observation_id] -> [observation_data]
     @staticmethod
@@ -368,7 +391,9 @@ class MemoryGraph:
     # get observation - observation is a dictionary
     def get_observation(self, observation_id):
         b = self.db.get(MemoryGraph.observation_key(observation_id))
-        return json.loads(b.decode("utf-8") )
+        observation = MemoryGraph.decode_observation(b)
+        observation["id"] = observation_id
+        return observation
 
     def insert_observation(self, observation):
         return self.insert_observations([observation])[0]
@@ -381,8 +406,7 @@ class MemoryGraph:
         observation_ids = self.generate_observation_ids(len(observations))
         wb = self.db.write_batch()
         for observation_id, observation in zip(observation_ids, observations):
-            j = json.dumps(observation)
-            b = j.encode("utf-8")
+            b = MemoryGraph.encode_observation(observation)
             wb.put(MemoryGraph.observation_key(observation_id), b)
         wb.write()
         return observation_ids
@@ -656,7 +680,7 @@ def next_pos(kp_grid, shape, g_pos, walk_length, stride):
 
 
 def extract_windows(frame, pos, window_size, walker_count):
-    windows = np.empty((walker_count, window_size, window_size, 3))
+    windows = np.empty((walker_count, window_size, window_size, 3), dtype=np.uint8)
 
     for i in range(walker_count):
         windows[i] = extract_window(frame, pos[i], window_size)
@@ -780,7 +804,6 @@ def show_patches(path_windows, path_features, path_positions, frame_shape, memor
     for i in range(len(groups)):
         group = list(groups[i])
         
-
         # node_ids = memory_graph.get_nodes(group)
         
         observation_ids = []
@@ -791,10 +814,9 @@ def show_patches(path_windows, path_features, path_positions, frame_shape, memor
             predicted_observations = memory_graph.get_predicted_observations(node_id)
             observation_ids.extend(predicted_observations)
 
-        windows = np.array([cv2.imread('./patches/patch'+str(observation_id)+'.png') for observation_id in observation_ids])
-
         observations = memory_graph.get_observations(observation_ids)
 
+        windows = np.array([obs["patch"] for obs in observations])
         positions = [(obs["y"], obs["x"]) for obs in observations]
 
         paint_windows(positions, windows, frame, window_size, i+1)
@@ -834,12 +856,15 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
         path = list(set(path))
 
         windows = np.array([extract_window(res_frame, p, window_size) for p in path])
+        print("windows.shape, windows.dtype", windows.shape, windows.dtype)
 
         preprocess_input(windows)
         features = model.predict(windows)
         features = features.reshape((windows.shape[0], 512))
         
-        print("windows.shape, feats.shape", windows.shape, features.shape)
+        print("windows.shape, windows.dtype", windows.shape, windows.dtype)
+        print("feats.shape, feats.dtype", windows.shape, windows.dtype)
+
         show_patches(windows, features, path, frame.shape, memory_graph, window_size)
 
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
@@ -884,7 +909,7 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
 
 
-def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_files=None, max_frames=30*30, walker_count = 200, save_windows = True, max_elements=10000000, keep_times=False):
+def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_files=None, max_frames=30*30, walker_count = 200, max_elements=10000000, keep_times=False):
 
     print("Starting...")
 
@@ -933,9 +958,6 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
             # open video file for a run though
             cap = cv2.VideoCapture(join(video_path, video_file))
 
-            if save_windows:
-                Path(join(patch_dir, video_file)).mkdir(parents=True, exist_ok=True)
-
             # walkers
             g_pos = [None for _ in range(walker_count)]
             pos = [None for _ in range(walker_count)]
@@ -973,7 +995,8 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
 
                 t3.mark(p="TIME walker_count x next_pos")
 
-                windows = extract_windows(frame, pos, window_size, walker_count)
+                patches = extract_windows(frame, pos, window_size, walker_count)
+                windows = patches.astype(np.float64)
 
                 t3.mark(p="TIME extract_windows")
 
@@ -984,7 +1007,7 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
         
                 t3.mark(p="TIME preprocess_input + model.predict")
 
-                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, keep_times)
+                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, keep_times)
 
                 t3.mark(p="TIME add_parrelell_observations")
 
@@ -1004,9 +1027,6 @@ def build_graph(db_path, video_path, patch_dir, walk_length = 100, window_size =
                         g_pos[i] = None
                         pos[i] = None
                         adj[i] = False  
-                    if save_windows:
-                        cv2.imwrite(join(patch_dir, video_file, 'patch_' + str(ids[i][1]) + '.png'), windows[i])
-
 
                     stats = ids[i][2]
 
