@@ -237,11 +237,26 @@ class MemoryGraph:
         start = MemoryGraph.node_key(0)
         stop = MemoryGraph.node_key(MAX_KEY_VALUE)
 
+        n = 0
+        feats = []
+        ids = []
+
         for key, value in self.db.iterator(start=start, stop=stop):
             node = MemoryGraph.decode_node(key, value) 
+
             self.graph.add_node(node["id"])
-            # TODO: Test if adding in batches is faster
-            self.index.add_items([node["f"]], [node["id"]])
+            
+            feats.append(node["f"])
+            ids.append(node["id"])
+
+            n += 1
+            if n % 1000 == 0:
+                self.index.add_items(feats, ids)
+                feats = []
+                ids = []
+
+        if len(feats) > 0:
+            self.index.add_items(feats, ids)
 
 
     def load_all_edges(self):
@@ -251,7 +266,7 @@ class MemoryGraph:
 
         for b in self.db.iterator(start=start, stop=stop, include_value=False):
             from_node_id = struct.unpack_from('>Q', b, offset=1)[0]
-            to_node_id = struct.unpack_from('>Q', b, offset=5)[0]
+            to_node_id = struct.unpack_from('>Q', b, offset=9)[0]
             self.graph.add_edge(from_node_id, to_node_id)
 
 
@@ -267,7 +282,7 @@ class MemoryGraph:
         while True:
             id = random.getrandbits(64)
             b = self.db.get(key_fn(id))
-            if b is None
+            if b is None:
                 return id
 
     ######################################################
@@ -381,7 +396,7 @@ class MemoryGraph:
     def get_integrated_observations(self, node_id):
         start = MemoryGraph.integrated_observations_key(node_id, 0)
         stop = MemoryGraph.integrated_observations_key(node_id, MAX_KEY_VALUE)
-        return [struct.unpack_from('>Q', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>Q', b, offset=9)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
     # TODO: should be parallelizable safe (plyvel)
     def add_integrated_observations(self, node_ids, observation_ids):
@@ -401,7 +416,7 @@ class MemoryGraph:
     def get_predicted_observations(self, node_id):
         start = MemoryGraph.predicted_observations_key(node_id, 0)
         stop = MemoryGraph.predicted_observations_key(node_id, MAX_KEY_VALUE)
-        return [struct.unpack_from('>Q', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>Q', b, offset=9)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
     # TODO: should be parallelizable safe (plyvel)
     def add_predicted_observations(self, node_ids, observation_ids):
@@ -421,7 +436,7 @@ class MemoryGraph:
     def get_predicted_nodes(self, observation_id):
         start = MemoryGraph.predicted_nodes_key(observation_id, 0)
         stop = MemoryGraph.predicted_nodes_key(observation_id, MAX_KEY_VALUE)
-        return [struct.unpack_from('>Q', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>Q', b, offset=9)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
 
     # integrated_node:[observation_id]:[node_id]
@@ -433,7 +448,7 @@ class MemoryGraph:
     def get_integrated_nodes(self, observation_id):
         start = MemoryGraph.integrated_nodes_key(observation_id, 0)
         stop = MemoryGraph.integrated_nodes_key(observation_id, MAX_KEY_VALUE)
-        return [struct.unpack_from('>Q', b, offset=5)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
+        return [struct.unpack_from('>Q', b, offset=9)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
     # TODO: should be parallelizable safe (networkx)
     def get_adjacencies(self, node_id, radius):
