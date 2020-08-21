@@ -250,7 +250,7 @@ class MemoryGraph:
     def load_all_node_ids(self):
         start = MemoryGraph.node_key(0)
         stop = MemoryGraph.node_key(MAX_KEY_VALUE)
-        for key in self.db.iterator(start=start, stop=stop, include_value=False)
+        for key in self.db.iterator(start=start, stop=stop, include_value=False):
             self.graph.add_node(MemoryGraph.decode_node_key(key))
 
 
