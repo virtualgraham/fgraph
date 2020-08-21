@@ -198,7 +198,7 @@ MAX_KEY_VALUE = 18446744073709551615
 
 class MemoryGraph:
     #def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=1000, M=64, rebuild_index=False):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=300, M=64, rebuild_index=False):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
