@@ -977,6 +977,8 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
 
         for video_file in video_files:
             
+            print(video_file)
+            
             t2 = TimeMarker(enabled=keep_times)
 
             video_file_count += 1
