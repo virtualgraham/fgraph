@@ -198,7 +198,7 @@ MAX_KEY_VALUE = 18446744073709551615
 
 class MemoryGraph:
     #def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=300, M=64, rebuild_index=False):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=400, M=64, rebuild_index=False):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
@@ -237,7 +237,7 @@ class MemoryGraph:
             self.load_all_node_ids()
         else:
             print("MemoryGraph: building index")
-            self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
+            self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef * 2, M=self.M)
             self.index.set_ef(self.ef)
             self.load_all_nodes()
             if len(self.graph) > 0:
