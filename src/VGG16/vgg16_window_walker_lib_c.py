@@ -198,17 +198,21 @@ MAX_KEY_VALUE = 18446744073709551615
 
 class MemoryGraph:
 
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
         self.ef = ef
         self.M = M
         self.path = path
-        self.open()
+        self.open(rebuild_index)
 
     def save(self):
-        return 
+        print("Saving Index")
+        index_path = os.path.splitext(self.path)[0] + ".index"
+        print("index_path", index_path)
+        self.index.save_index(index_path)
+        print("Index Saved")
 
     def close(self):
         self.save()
@@ -217,23 +221,40 @@ class MemoryGraph:
         self.index = None
         self.db = None
 
-    def open(self):
+    def open(self, rebuild_index):
         self.db = plyvel.DB(self.path, create_if_missing=True)
 
-        self.index = hnswlib.Index(space=self.space, dim=self.dim) 
-        self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
-        self.index.set_ef(self.ef)
-
         self.graph = nx.Graph()
+
+        index_path = os.path.splitext(self.path)[0] + ".index"
+        print("index_path", index_path)
+        self.index = hnswlib.Index(space=self.space, dim=self.dim) 
+
+        if os.path.isfile(index_path) and not rebuild_index:
+            print("MemoryGraph: loading index")
+            self.index.load_index(index_path)
+            self.index.set_ef(self.ef)
+            self.load_all_node_ids()
+        else:
+            print("MemoryGraph: building index")
+            self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
+            self.index.set_ef(self.ef)
+            self.load_all_nodes()
+            self.save()
         
-        self.load_all_nodes()
         self.load_all_edges()
 
-        print("MemoryGraph: loaded", self.index.get_current_count(), "nodes", self.graph.number_of_edges(), "edges")
+        print("MemoryGraph:", self.index.get_current_count(), "nodes", self.graph.number_of_edges(), "edges")
+
+
+    def load_all_node_ids(self):
+        start = MemoryGraph.node_key(0)
+        stop = MemoryGraph.node_key(MAX_KEY_VALUE)
+        for key in self.db.iterator(start=start, stop=stop, include_value=False)
+            self.graph.add_node(MemoryGraph.decode_node_key(key))
 
 
     def load_all_nodes(self):
-        print("MemoryGraph: loading nodes")
         start = MemoryGraph.node_key(0)
         stop = MemoryGraph.node_key(MAX_KEY_VALUE)
 
@@ -311,6 +332,10 @@ class MemoryGraph:
         node["f"] = MemoryGraph.numpy_from_bytes(v)
         node["id"] = struct.unpack_from('>Q', k, offset=1)[0]
         return node
+
+    @staticmethod
+    def decode_node_key(k):
+        return struct.unpack_from('>Q', k, offset=1)[0]
 
     @staticmethod
     def node_key(node_id):
