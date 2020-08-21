@@ -240,7 +240,8 @@ class MemoryGraph:
             self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef, M=self.M)
             self.index.set_ef(self.ef)
             self.load_all_nodes()
-            self.save()
+            if len(self.graph) > 0:
+                self.save()
         
         self.load_all_edges()
 
