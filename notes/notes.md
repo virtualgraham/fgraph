@@ -65,3 +65,118 @@ perhaps each node in the lower graph is in the higher graph but has the max feat
 
 Maximal cliques can be merged?
 https://en.wikipedia.org/wiki/Clique_problem#Listing_all_maximal_cliques
+
+
+# Camera Motion
+
+The walk grid should transform with with camera motion, rotation translation scale 
+
+# Change Detection
+
+Use same type of change detection as video encoders for attention. Adjust for camera movement transformations
+
+# Orientation detection
+Instead of having orientation invariant feature detectors, there should be an orientation detector that determines the walk grid orientation even before tracking
+
+# Edge Meaning
+Edges should represent actions, specifically "looking in a particular direction". So if you have have seen a clearly identified feature you should be able to estimate what you see by looking right or looking left.  It should require less of an exact match for a feature that is in the place it is expected.
+
+# Feature fusion
+
+Multiple different kind of features should be able to added to graph
+
+# Shape of objects
+
+The shape of objects needs to be added as one of the new features
+perhaps some edge detection features 
+When edges are connected in a graph they represent different shapes?
+
+# Predictions
+
+Predictions should not be a simple neighborhood search. It should be a search though candidates of what objects are being observed. Try fully connecting small neighborhoods to connect larger neighborhoods.
+
+
+## 
+
+Given a video with a single sample masked object, locate that object in a set of videos with multiple objects that may or may not contain the sample object.
+    The program will produce a collection of observations
+        
+        What percent of the produced observations are of the sample class?
+        What percent of the produced observations are not of the sample class?
+
+
+
+        [True Positive] What percent of observations in complete set of observations of sample class are in produced observations? 100%
+        [False Negative] What percent of observations in complete set of observations of sample class are not in produced observations? 0%
+        [False Positive] What percent of observations in complete set of observations not of sample class are in produced observations? 0%
+        [True Negative] What percent of observations in complete set of observations not of sample class are not in produced observations? 100%
+
+ 
+
+        [True Positive]  What percent of videos with sample class have produced observations of the sample class?
+        (number of unique videos in produced observations labeled with sample class) / (total number of videos belonging to sample class)
+        
+        [False Negative] What percent of videos with sample class do not have produced observations of the sample class?
+        1 - [True Positive]
+
+        [False Positive] What percent of videos without sample class have observations of the sample class?
+        (number of unique videos in produced observations NOT labeled with sample class) / (total number of videos not belonging to sample class)
+
+        [True Negative] What percent of videos without sample class have observations not of the sample class?
+        1 - [False Positive]
+
+
+
+        # frames with sample class are frames with more than a threshold number of pixels belonging to sample class 
+
+        [True Positive]  What percent of frames with sample class have produced observations of the sample class?
+        (number of unique frames in produced observations labeled with sample class) / (total number of frames with sample class)
+
+        [False Negative] What percent of frames with sample class do not have produced observations of the sample class?
+        1 - [True Positive]
+
+        [False Positive] What percent of frames without sample class have produced observations of the sample class?
+        (number of unique frames in produced observations NOT labeled with sample class) / (total number of frames without sample class)
+
+        [True Negative] What percent of frames without sample class  have no produced observations of the sample class?
+        1 - [False Positive]
+
+
+
+        # Where the pixels inside the observation window are all assumed to be of the same class
+
+        [True Positive]  What percent of pixels belonging to sample class are in the unique set of pixels of produced observations? 
+        (number of unique pixels in produced observations labeled with sample class) / (total number of pixels belonging to class)
+
+        [False Negative] What percent of pixels belonging to sample class are not in the unique set of pixels of produced observations? 
+        1 - [True Positive]
+
+        [False Positive] What percent of pixels not belonging to sample class are in the unique set of pixels of produced observations? 
+        (number of unique pixels in produced observations NOT labeled with sample class) / (total number of pixels not belonging to class)
+
+        [True Negative] What percent of pixels not belonging to sample class are not in the unique set of pixels of produced observations?
+        1 - [False Positive]
+
+
+
+
+
+    Summary Statistics needed to Calculate Above Measures Quickly
+        Total number of observations
+        Total number of observations of each class
+
+        Total number of videos
+        Total number of videos of each class
+
+        Total number of videos
+        for each class total number of frames with pixels belonging to class
+
+        Total number of pixels
+        for each class total number of pixels belonging to class
+
+Given a set of videos each which contain a random subset of objects, locate each object wherever it appears.
+    The program will produce multiple sets of observations, where each set presumably represents all the observations for a class of objects.
+    For each set in the produced observations:
+        For each known class:
+            Calculate the stats for the object retrieval task.
+    Ideally each set should only score well with zero or one classes and there should only be one set that scores well for each known class.
