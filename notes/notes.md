@@ -158,6 +158,8 @@ Given a video with a single sample masked object, locate that object in a set of
         1 - [False Positive]
 
 
+        For each frame there is a grid with each element being the size of the center of the window (used to determine the class of the observation)
+        Each grid element is labeled with the class the majority of correctly labeled observations would be if centered anywhere in that element
 
 
 
@@ -168,11 +170,12 @@ Given a video with a single sample masked object, locate that object in a set of
         Total number of videos
         Total number of videos of each class
 
-        Total number of videos
-        for each class total number of frames with pixels belonging to class
+        Total number of frames
+        for each class total number of frames belonging to class
 
         Total number of pixels
         for each class total number of pixels belonging to class
+
 
 Given a set of videos each which contain a random subset of objects, locate each object wherever it appears.
     The program will produce multiple sets of observations, where each set presumably represents all the observations for a class of objects.
@@ -180,3 +183,9 @@ Given a set of videos each which contain a random subset of objects, locate each
         For each known class:
             Calculate the stats for the object retrieval task.
     Ideally each set should only score well with zero or one classes and there should only be one set that scores well for each known class.
+
+# TODO
+    in build_graph
+        add object to observation before inserting
+        call increment_video_counts after each video
+        call increment_frame_counts after each frame

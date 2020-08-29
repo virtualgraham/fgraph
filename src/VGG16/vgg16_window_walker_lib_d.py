@@ -325,12 +325,12 @@ class MemoryGraph:
     # node:[node_id] -> [node_data]
     @staticmethod
     def encode_node(node):
-        return b'' # MemoryGraph.numpy_to_bytes(node["f"])
+        return MemoryGraph.numpy_to_bytes(node["f"])
 
     @staticmethod
     def decode_node(k, v):
         node = dict()
-        # node["f"] = MemoryGraph.numpy_from_bytes(v)
+        node["f"] = MemoryGraph.numpy_from_bytes(v)
         node["id"] = struct.unpack_from('>Q', k, offset=1)[0]
         return node
 
@@ -381,6 +381,104 @@ class MemoryGraph:
         wb.write()
 
 
+    ######################
+    # Counts
+    ######################
+
+    @staticmethod
+    def pixel_object_count_key(obj):
+        return b'c:p:' + obj.encode()
+
+    @staticmethod
+    def pixel_count_key():
+        return b'c:p'
+
+    @staticmethod
+    def frame_object_count_key(obj):
+        return b'c:f:' + obj.encode()
+
+    @staticmethod
+    def frame_count_key():
+        return b'c:f'
+
+    @staticmethod
+    def observation_object_count_key(obj):
+        return b'c:o:' + obj.encode()
+
+    @staticmethod
+    def observation_count_key():
+        return b'c:o'
+
+    @staticmethod
+    def video_object_count_key(obj):
+        return b'c:v:' + obj.encode()
+
+    @staticmethod
+    def video_count_key():
+        return b'c:v'
+
+    def increment_count_wb(self, wb, key, amount):
+        c = self.get_count(key)
+        wb.put(key, struct.pack('>Q', c + amount))
+
+    def get_count(self, key):
+        c = self.db.get(key)
+        if c is None:
+            return 0
+        else:
+            return struct.unpack_from('>Q', c)
+
+    def get_counts(self):
+        observation_count = self.get_count(MemoryGraph.observation_count_key())
+        observation_objects = dict()
+        for k,v in self.db.iterator(start=b'c:o:', stop=b'c:o:~'):
+            observation_objects[k.decode()] = struct.unpack_from('>Q', v)
+
+        frame_count = self.get_count(MemoryGraph.frame_count_key())
+        frame_objects = dict()
+        for k,v in self.db.iterator(start=b'c:f:', stop=b'c:f:~'):
+            frame_objects[k.decode()] = struct.unpack_from('>Q', v)
+
+        video_count = self.get_count(MemoryGraph.video_count_key())
+        video_objects = dict()
+        for k,v in self.db.iterator(start=b'c:v:', stop=b'c:v:~'):
+            video_objects[k.decode()] = struct.unpack_from('>Q', v)
+
+        pixel_count = self.get_count(MemoryGraph.pixel_count_key())
+        pixel_objects = dict()
+        for k,v in self.db.iterator(start=b'c:p:', stop=b'c:p:~'):
+            pixel_objects[k.decode()] = struct.unpack_from('>Q', v)
+
+        return {
+            "observation_count": observation_count,
+            "observation_objects": observation_objects,
+            "frame_count": frame_count,
+            "frame_objects": frame_objects,
+            "video_count": video_count,
+            "video_objects": video_objects,
+            "pixel_count": pixel_count,
+            "pixel_objects": pixel_objects,
+        }
+
+
+    # objects: a set of object names
+    def increment_video_counts(self, objects):
+        wb = self.db.write_batch()
+        for obj in objects:
+            self.increment_count_wb(wb, MemoryGraph.video_object_count_key(obj), 1)
+        self.increment_count_wb(wb, MemoryGraph.video_count_key(), 1)
+        wb.write()
+
+    # object_pixels: a dict of object names -> pixels in object
+    def increment_frame_counts(self, pixels, object_pixels)
+        wb = self.db.write_batch()
+        for obj, pix in object_pixels.items():
+            self.increment_count_wb(wb, MemoryGraph.frame_object_count_key(obj), 1)
+            self.increment_count_wb(wb, MemoryGraph.pixel_object_count_key(obj), pix)
+        self.increment_count_wb(wb, MemoryGraph.frame_count_key(), 1)
+        self.increment_count_wb(wb, MemoryGraph.pixel_count_key(), pixels)
+        wb.write()
+
 
     ######################
     # OBSERVATIONS
@@ -392,20 +490,39 @@ class MemoryGraph:
         bt = struct.pack('>I', observation["t"]) # 4 bytes
         by = struct.pack('>d', observation["y"]) # 8 bytes
         bx = struct.pack('>d', observation["x"]) # 8 bytes
-        # bpatch = observation["patch"].tobytes() # 3072 bytes
+        bpatch = observation["patch"].tobytes() # 3072 bytes
+
+        if "o" in observation:
+            bo = observation["o"].encode()
+        else:
+            bo = b''
+
+        bolen = struct.pack('>H', len(bo)) # 2 bytes
+        
         bfile = observation["file"].encode()
-        return bt + by + bx  + bfile
+        bfilelen = struct.pack('>H', len(bfile)) # 2 bytes
+        
+        return bt + by + bx  + bpatch + bolen + bo + bfilelen + bfile
 
 
     @staticmethod
     def decode_observation(b):
         observation = dict()
-        # (32, 32, 3) uint8
         observation["t"] = struct.unpack_from('>I', b, offset=0)[0]
         observation["y"] = struct.unpack_from('>d', b, offset=4)[0]
         observation["x"] = struct.unpack_from('>d', b, offset=12)[0]
-        #observation["patch"] = np.frombuffer(b[20:3092], dtype=np.uint8).reshape(32, 32, 3)
-        observation["file"] = b[20:].decode()
+        observation["patch"] = np.frombuffer(b[20:3092], dtype=np.uint8).reshape(32, 32, 3)
+
+        offset = 3092
+        olen = struct.unpack_from('>H', b, offset=offset)[0]
+        offset += 2
+        if olen > 0:
+            observation["o"] = b[offset:offset+olen].decode()
+        offset += olen
+        filelen = struct.unpack_from('>H', b, offset=offset)[0]
+        offset += 2
+        observation["file"] = b[offset:offset+filelen].decode()
+
         return observation
 
 
@@ -431,9 +548,15 @@ class MemoryGraph:
     def insert_observations(self, observations):
         observation_ids = self.generate_observation_ids(len(observations))
         wb = self.db.write_batch()
+
         for observation_id, observation in zip(observation_ids, observations):
             b = MemoryGraph.encode_observation(observation)
             wb.put(MemoryGraph.observation_key(observation_id), b)
+            if "o" in observation:
+                self.increment_count_wb(wb, MemoryGraph.observation_object_count_key(observation["o"]), 1)
+
+        self.increment_count_wb(wb, MemoryGraph.observation_count_key(), len(observations))
+        
         wb.write()
         return observation_ids
 
