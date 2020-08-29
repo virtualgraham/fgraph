@@ -117,16 +117,9 @@ def next_pos(mask_frame, pos):
 
 
 
-qq = 0
 
-def color_fun(p):
-    global qq 
-    qq += 1
-    if qq % 1000 == 0:
-        print(qq)
-    for i in range(1,len(color_vectors)):
-        if np.linalg.norm(color_vectors[i] - p) <= 25: return i
-    return 0
+color_dist = 15
+
 
 color_vectors = [
     np.array((0,0,0)),
@@ -147,6 +140,10 @@ color_vectors = [
     np.array((74,254,193)),
     np.array((178,213,251)), 
 ]
+
+
+color_full = np.array([np.tile(cv, (1280, 720, 1)) for cv in color_vectors])
+
 
 color_objects = {
     None,
@@ -169,8 +166,19 @@ color_objects = {
 }
 
 
-def run(file):
+def color_fun(mask_frame):
+    o = np.zeros((1280, 720), dtype=np.uint8)
+
+    for i in range(1, len(color_vectors)):
+        o[np.linalg.norm(color_full[i] - mask_frame, axis=2)<color_dist] = i
     
+    return o
+
+
+
+
+
+def run(file):
 
     mask = cv2.VideoCapture(join(mask_path,"mask_"+file))
     video = cv2.VideoCapture(join(video_path,file))
@@ -185,56 +193,16 @@ def run(file):
         done = True
         return
 
-    color_dist = 15
-
-    apple_full = np.tile(color_vectors[1], (1280, 720, 1))
-    bear_full = np.tile(color_vectors[2], (1280, 720, 1))
-    brush_full = np.tile(color_vectors[3], (1280, 720, 1))
-    carrot_full = np.tile(color_vectors[4], (1280, 720, 1))
-    chain_full = np.tile(color_vectors[5], (1280, 720, 1))
-    clippers_full = np.tile(color_vectors[6], (1280, 720, 1))
-    cologne_full = np.tile(color_vectors[7], (1280, 720, 1))
-    cup_full = np.tile(color_vectors[8], (1280, 720, 1))
-    flowers_full = np.tile(color_vectors[9], (1280, 720, 1))
-    hanger_full = np.tile(color_vectors[10], (1280, 720, 1))
-    ketchup_full = np.tile(color_vectors[11], (1280, 720, 1))
-    notebook_full = np.tile(color_vectors[12], (1280, 720, 1))
-    opener_full = np.tile(color_vectors[13], (1280, 720, 1))
-    pepper_full = np.tile(color_vectors[14], (1280, 720, 1))
-    rock_full = np.tile(color_vectors[15], (1280, 720, 1))
-    shorts_full = np.tile(color_vectors[16], (1280, 720, 1))
-
-    o = np.zeros((1280, 720), dtype=np.uint8)
-
-
-    o[np.linalg.norm(apple_full - mask_frame, axis=2)<color_dist] = 1
-    o[np.linalg.norm(bear_full - mask_frame, axis=2)<color_dist] = 2
-    o[np.linalg.norm(brush_full - mask_frame, axis=2)<color_dist] = 3
-    o[np.linalg.norm(carrot_full - mask_frame, axis=2)<color_dist] = 4
-    o[np.linalg.norm(chain_full - mask_frame, axis=2)<color_dist] = 5
-    o[np.linalg.norm(clippers_full - mask_frame, axis=2)<color_dist] = 6
-    o[np.linalg.norm(cologne_full - mask_frame, axis=2)<color_dist] = 7
-    o[np.linalg.norm(cup_full - mask_frame, axis=2)<color_dist] = 8
-    o[np.linalg.norm(flowers_full - mask_frame, axis=2)<color_dist] = 9
-    o[np.linalg.norm(hanger_full - mask_frame, axis=2)<color_dist] = 10
-    o[np.linalg.norm(ketchup_full - mask_frame, axis=2)<color_dist] = 11
-    o[np.linalg.norm(notebook_full - mask_frame, axis=2)<color_dist] = 12
-    o[np.linalg.norm(opener_full - mask_frame, axis=2)<color_dist] = 13
-    o[np.linalg.norm(pepper_full - mask_frame, axis=2)<color_dist] = 14
-    o[np.linalg.norm(rock_full - mask_frame, axis=2)<color_dist] = 15
-    o[np.linalg.norm(shorts_full - mask_frame, axis=2)<color_dist] = 16
-
-
-
     # pos = next_pos(mask_frame, pos)
     # window = extract_window(mask_frame, pos, window_size)
     # print(mask_frame.shape, mask_frame.dtype)
 
     # # d = np.apply_along_axis(color_fun, 2, mask_frame)
 
-    # print(d)
+    o = color_fun(mask_frame)
     unique, counts = np.unique(o, return_counts=True)
     print(dict(zip(unique, counts)))
+
     # cv2.imshow('window', window)
 
     # cv2.waitKey(5000)
