@@ -1,0 +1,40 @@
+videos = [
+	'333_apple_bear_carrot_chain_clippers_cup_notebook_opener.mp4', 
+	'360_brush_chain_cup_hanger_ketchup_opener_pepper_rock.mp4', 
+	'337_apple_carrot_clippers_cologne_cup_hanger_notebook_pepper.mp4', 
+	'335_chain_cologne_cup_hanger_ketchup_notebook_opener_shorts.mp4', 
+	'344_brush_chain_clippers_cologne_cup_flowers_hanger_pepper.mp4', 
+	'361_apple_bear_brush_cologne_flowers_notebook_rock_shorts.mp4', 
+	'336_apple_carrot_clippers_cologne_hanger_notebook_pepper_rock.mp4',
+	'339_bear_chain_clippers_flowers_hanger_notebook_opener_pepper.mp4',
+	'325_bear_brush_carrot_clippers_cologne_ketchup_pepper_shorts.mp4', 
+
+	'359_apple_bear_carrot_flowers_ketchup_opener_rock_shorts.mp4', 
+	'365_bear_brush_carrot_chain_cup_flowers_ketchup_shorts.mp4', 
+	'370_apple_brush_flowers_hanger_ketchup_opener_rock_shorts.mp4'
+] 
+   
+    
+#3cb44b Apple Green
+#ffffff Bear White
+#ffe119 Brush Yellow
+#f58231 Carrot Orange
+#911eb4 Chain Purple
+#000075 Clippers Navy 
+#fffac8 Cologne Beige
+#fabed4 Cup Pink
+#f032e6 Flowers Magenta
+#42d4f4 Hanger Cyan
+#800000 Ketchup Maroon
+#aaffc3 Notebook Mint
+#a9a9a9 Opener Grey
+#e6194B Pepper Red 
+#bfef45 Rock Lime
+#ffd8b1 Shorts Apricot
+
+
+
+
+{'apple': 6, 'bear': 6, 'brush': 6, 'carrot': 6, 'chain': 6, 'clippers': 6, 'cologne': 6, 'cup': 6, 'flowers': 6, 'hanger': 7, 'ketchup': 6, 'notebook': 6, 'opener': 6, 'pepper': 6, 'rock': 5, 'shorts': 6}
+
+https://www.oracle.com/webapps/redirect/signon?nexturl=https://download.oracle.com/otn/java/jdk/11.0.8%2B10/dc5cf74f97104e8eac863698146a7ac3/jdk-11.0.8_osx-x64_bin.dmg
