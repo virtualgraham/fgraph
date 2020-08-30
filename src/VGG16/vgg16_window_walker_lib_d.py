@@ -8,6 +8,7 @@ from os.path import isfile, isdir, join, split, splitext
 import json
 from pathlib import Path
 import threading
+import re 
 
 import numpy as np
 import cv2
@@ -35,31 +36,33 @@ class MemoryGraphWalker:
         self.predictions = dict()
 
 
-    def add_parrelell_observations(self, file, t, pos, adj, feats, patches, keep_times=False):
+    def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects, keep_times=False):
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
         else:
             labels = [None for i in range(len(feats))]
             distances = [None for i in range(len(feats))]
 
-        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], labels[i], distances[i], i, keep_times) for i in range(len(feats))]
+        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, keep_times) for i in range(len(feats))]
 
 
-    def add_observation(self, file, t, pos, adj, feats, patch, walker_id, keep_times=False):
+    def add_observation(self, file, t, pos, adj, feats, patch, obj, walker_id, keep_times=False):
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query([feats], k = self.knn)
 
-        return self._add_observation(file, t, pos, adj, feats, patch, labels[0], distances[0], i, keep_times=keep_times)
+        return self._add_observation(file, t, pos, adj, feats, patch, obj, labels[0], distances[0], i, keep_times=keep_times)
         
 
     # TODO: should be parallelizable
-    def _add_observation(self, file, t, pos, adj, feats, patch, labels, distances, walker_id, keep_times=False):
+    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, keep_times=False):
  
         stats = {"adj":adj}
 
         tm = TimeMarker(enabled=keep_times)
 
-        observation_id = self.memory_graph.insert_observation({"file":file, "t":t, "y":pos[0], "x":pos[1], "patch":patch})
+        observation = {"file":file, "t":t, "y":pos[0], "x":pos[1], "patch":patch}
+        if obj is not None: observation["o"] = obj
+        observation_id = self.memory_graph.insert_observation(observation)
 
         tm.mark(s="insert_observation")
         
@@ -426,28 +429,28 @@ class MemoryGraph:
         if c is None:
             return 0
         else:
-            return struct.unpack_from('>Q', c)
+            return struct.unpack_from('>Q', c)[0]
 
     def get_counts(self):
         observation_count = self.get_count(MemoryGraph.observation_count_key())
         observation_objects = dict()
         for k,v in self.db.iterator(start=b'c:o:', stop=b'c:o:~'):
-            observation_objects[k.decode()] = struct.unpack_from('>Q', v)
+            observation_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
 
         frame_count = self.get_count(MemoryGraph.frame_count_key())
         frame_objects = dict()
         for k,v in self.db.iterator(start=b'c:f:', stop=b'c:f:~'):
-            frame_objects[k.decode()] = struct.unpack_from('>Q', v)
+            frame_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
 
         video_count = self.get_count(MemoryGraph.video_count_key())
         video_objects = dict()
         for k,v in self.db.iterator(start=b'c:v:', stop=b'c:v:~'):
-            video_objects[k.decode()] = struct.unpack_from('>Q', v)
+            video_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
 
         pixel_count = self.get_count(MemoryGraph.pixel_count_key())
         pixel_objects = dict()
         for k,v in self.db.iterator(start=b'c:p:', stop=b'c:p:~'):
-            pixel_objects[k.decode()] = struct.unpack_from('>Q', v)
+            pixel_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
 
         return {
             "observation_count": observation_count,
@@ -470,7 +473,7 @@ class MemoryGraph:
         wb.write()
 
     # object_pixels: a dict of object names -> pixels in object
-    def increment_frame_counts(self, pixels, object_pixels)
+    def increment_frame_counts(self, pixels, object_pixels):
         wb = self.db.write_batch()
         for obj, pix in object_pixels.items():
             self.increment_count_wb(wb, MemoryGraph.frame_object_count_key(obj), 1)
@@ -492,7 +495,7 @@ class MemoryGraph:
         bx = struct.pack('>d', observation["x"]) # 8 bytes
         bpatch = observation["patch"].tobytes() # 3072 bytes
 
-        if "o" in observation:
+        if "o" in observation and observation["o"] is not None:
             bo = observation["o"].encode()
         else:
             bo = b''
@@ -552,7 +555,7 @@ class MemoryGraph:
         for observation_id, observation in zip(observation_ids, observations):
             b = MemoryGraph.encode_observation(observation)
             wb.put(MemoryGraph.observation_key(observation_id), b)
-            if "o" in observation:
+            if "o" in observation and observation["o"] is not None:
                 self.increment_count_wb(wb, MemoryGraph.observation_object_count_key(observation["o"]), 1)
 
         self.increment_count_wb(wb, MemoryGraph.observation_count_key(), len(observations))
@@ -742,9 +745,6 @@ class MemoryGraph:
 def np_cosine(x,y):
     return 1 - np.inner(x,y)/math.sqrt(np.dot(x,x)*np.dot(y,y))
 
-def resize_frame(image):
-    return image
-
 
 def get_rad_grid(g_pos, rad, shape, stride):
 
@@ -827,11 +827,41 @@ def next_pos(kp_grid, shape, g_pos, walk_length, stride):
     return loc, pos, False
 
 
+def object_names_from_video_file(video_file):
+    return re.findall('_([a-z]+)', video_file)
 
-def extract_windows(frame, pos, window_size, walker_count):
-    windows = np.empty((walker_count, window_size, window_size, 3), dtype=np.uint8)
 
-    for i in range(walker_count):
+def pixel_counts(obj_frame, center_size):
+    unique, counts = np.unique(obj_frame, return_counts=True)
+    unique = [object_name_for_idx(o) for o in unique]
+
+    min_pix = center_size * center_size * 0.9
+    pixels = dict([(u, c) for u, c in zip(unique, counts) if u is not None and c > min_pix])
+    
+    return pixels
+
+
+def extract_object(window, center_size):
+    c = np.bincount(window.flatten())
+    if np.max(c) >= center_size*center_size*.90:
+        return object_name_for_idx(np.argmax(c))
+    else:
+        return None
+
+
+def extract_objects(obj_frame, pos, center_size):
+    windows = np.empty((len(pos), center_size, center_size), dtype=np.uint8)
+
+    for i in range(len(pos)):
+        windows[i] = extract_window(obj_frame, pos[i], center_size)
+
+    return [extract_object(w, center_size) for w in windows]
+
+
+def extract_windows(frame, pos, window_size):
+    windows = np.empty((len(pos), window_size, window_size, 3), dtype=np.uint8)
+
+    for i in range(len(pos)):
         windows[i] = extract_window(frame, pos[i], window_size)
 
     return windows
@@ -1058,21 +1088,13 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
 
 
-def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride = 16, runs = 1, max_files=None, max_frames=30*30, walker_count = 200, max_elements=10000000, keep_times=False):
+def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, window_size = 32, center_size = 16, stride = 16, runs = 1, max_frames=30*30, walker_count = 200, max_elements=10000000, keep_times=False):
 
     print("Starting...")
 
     t1 = TimeMarker(enabled=keep_times)
 
-    if isdir(video_path):
-        video_files = [f for f in listdir(video_path) if f.endswith('.mp4') and isfile(join(video_path, f))]
-        random.shuffle(video_files)
-        if max_files is not None:
-            video_files = video_files[:max_files]
-    else:
-        sp = os.path.split(video_path)
-        video_files = [sp[1]]
-        video_path = sp[0]
+    random.shuffle(video_files)
 
     t1.mark(p="TIME video file paths")
 
@@ -1111,7 +1133,8 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
             video_file_count += 1
 
             # open video file for a run though
-            cap = cv2.VideoCapture(join(video_path, video_file))
+            mask = cv2.VideoCapture(join(mask_path,"mask_"+video_file))
+            video = cv2.VideoCapture(join(video_path, video_file))
 
             # walkers
             g_pos = [None for _ in range(walker_count)]
@@ -1129,28 +1152,29 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
 
                 t3 = TimeMarker(enabled=keep_times)
 
-                ret, frame = cap.read()
+                video_ret, video_frame = video.read()
+                mask_ret, mask_frame = mask.read()
                 
                 t3.mark(p="TIME read video frame")
 
-                if ret == False:
+                if video_ret == False or mask_ret == False:
                     done = True
                     break
 
-                frame = resize_frame(frame)
-
                 t3.mark(p="TIME resize_frame")
 
-                kp_grid = key_point_grid(orb, frame, stride)
+                obj_frame = color_fun(mask_frame)
+
+                kp_grid = key_point_grid(orb, video_frame, stride)
 
                 t3.mark(p="TIME key_point_grid")
 
                 for i in range(walker_count):
-                    g_pos[i], pos[i], adj[i] = next_pos(kp_grid, frame.shape, g_pos[i], walk_length, stride)
+                    g_pos[i], pos[i], adj[i] = next_pos(kp_grid, video_frame.shape, g_pos[i], walk_length, stride)
 
                 t3.mark(p="TIME walker_count x next_pos")
 
-                patches = extract_windows(frame, pos, window_size, walker_count)
+                patches = extract_windows(video_frame, pos, window_size)
                 windows = patches.astype(np.float64)
 
                 t3.mark(p="TIME extract_windows")
@@ -1162,7 +1186,10 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
         
                 t3.mark(p="TIME preprocess_input + model.predict")
 
-                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, keep_times)
+                objects = extract_objects(obj_frame, pos, center_size)
+                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, objects, keep_times)
+
+                print("observations with objects", len([x for x in objects if x is not None]))
 
                 t3.mark(p="TIME add_parrelell_observations")
 
@@ -1210,6 +1237,10 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
 
                 t3.mark(p="TIME write patches + compute stats")
 
+                object_pixels = pixel_counts(obj_frame, center_size)
+                print("object_pixels", object_pixels)
+                memory_graph.increment_frame_counts(obj_frame.shape[0]*obj_frame.shape[1], object_pixels)
+
                 if keep_times:
                     print(time_stats)
 
@@ -1224,11 +1255,22 @@ def build_graph(db_path, video_path, walk_length = 100, window_size = 32, stride
                     "many", has_too_many_accurate_predictions_count,
                     "adj", adjacencies_inserted,
                 )
+
                 
-            cap.release()
+                
+            mask.release()
+            video.release()
+
+            # objects: a set of object names
+            video_objects = object_names_from_video_file(video_file)
+            print("video_objects", video_objects)
+            memory_graph.increment_video_counts(video_objects)
 
             # if r < (runs-1):
             #     memory_graph.save()
+
+    counts = memory_graph.get_counts()
+    print("counts", counts)
 
     memory_graph.close()
     
@@ -1248,6 +1290,67 @@ colors = [
     (189, 211, 147), (229, 111, 254), (222, 255, 116), (0, 255, 120), (0, 155, 255), (0, 100, 1), (0, 118, 255), 
     (133, 169, 0), (0, 185, 23), (120, 130, 49), (0, 255, 198), (255, 110, 65), (232, 94, 190), (0, 0, 0)
 ]
+
+
+color_dist = 15
+
+
+color_vectors = [
+    np.array((0,0,0)),
+    np.array((77,198,69)),
+    np.array((255,255,255)),
+    np.array((32,233,249)),
+    np.array((54,123,235)),
+    np.array((173,7,135)),
+    np.array((110,0,0)),
+    np.array((203,252,254)),
+    np.array((211,180,242)),
+    np.array((224,17,224)),
+    np.array((240,222,78)),
+    np.array((0,0,115)),
+    np.array((195,255,176)),
+    np.array((168,168,168)),
+    np.array((74,0,212)),
+    np.array((74,254,193)),
+    np.array((178,213,251)), 
+]
+
+
+color_full = np.array([np.tile(cv, (1280, 720, 1)) for cv in color_vectors])
+
+
+color_objects = [
+    None,
+    "apple",
+    "bear",
+    "brush",
+    "carrot",
+    "chain",
+    "clippers",
+    "cologne",
+    "cup",
+    "flowers",
+    "hanger",
+    "ketchup",
+    "notebook",
+    "opener",
+    "pepper",
+    "rock",
+    "shorts",
+]
+
+def object_name_for_idx(idx):
+    if idx > 0 and idx < len(color_objects):
+        return color_objects[idx]
+    return None
+
+def color_fun(mask_frame):
+    o = np.zeros((1280, 720), dtype=np.uint8)
+
+    for i in range(1, len(color_vectors)):
+        o[np.linalg.norm(color_full[i] - mask_frame, axis=2)<color_dist] = i
+    
+    return o
 
 
 # utility for working with marks and intervals

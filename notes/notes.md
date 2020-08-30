@@ -189,3 +189,63 @@ Given a set of videos each which contain a random subset of objects, locate each
         add object to observation before inserting
         call increment_video_counts after each video
         call increment_frame_counts after each frame
+
+
+
+
+video_objects ['apple', 'bear', 'carrot', 'chain', 'clippers', 'cup', 'notebook', 'opener']
+
+counts 
+
+{
+'observation_count': 90800, 
+'observation_objects': {
+    'c:o:apple': 1439, 
+    'c:o:bear': 6678, 
+    'c:o:carrot': 956, 
+    'c:o:chain': 2263, 
+    'c:o:clippers': 789, 
+    'c:o:cup': 640, 
+    'c:o:notebook': 431, 
+    'c:o:opener': 425
+    }, 
+
+'frame_count': 454, 
+'frame_objects': {
+    'c:f:apple': 420, 
+    'c:f:bear': 454, 
+    'c:f:carrot': 454, 
+    'c:f:chain': 454, 
+    'c:f:clippers': 454, 
+    'c:f:cologne': 196, 
+    'c:f:cup': 454, 
+    'c:f:notebook': 430, 
+    'c:f:opener': 436, 
+    'c:f:shorts': 200
+    }, 
+
+'video_count': 1, 
+'video_objects': {
+    'c:v:apple': 1, 
+    'c:v:bear': 1, 
+    'c:v:carrot': 1, 
+    'c:v:chain': 1, 
+    'c:v:clippers': 1, 
+    'c:v:cup': 1, 
+    'c:v:notebook': 1, 
+    'c:v:opener': 1
+    }, 
+
+'pixel_count': 418406400, 
+'pixel_objects': {
+    'c:p:apple': 9715039, 
+    'c:p:bear': 43359314, 
+    'c:p:carrot': 8215097, 
+    'c:p:chain': 7592207, 
+    'c:p:clippers': 6154470, 
+    'c:p:cologne': 5493, 
+    'c:p:cup': 17976043, 
+    'c:p:notebook': 13790752, 
+    'c:p:opener': 4502877, 
+    'c:p:shorts': 413}
+}
