@@ -435,22 +435,22 @@ class MemoryGraph:
         observation_count = self.get_count(MemoryGraph.observation_count_key())
         observation_objects = dict()
         for k,v in self.db.iterator(start=b'c:o:', stop=b'c:o:~'):
-            observation_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
+            observation_objects[k.decode().split(':')[2]] = struct.unpack_from('>Q', v)[0]
 
         frame_count = self.get_count(MemoryGraph.frame_count_key())
         frame_objects = dict()
         for k,v in self.db.iterator(start=b'c:f:', stop=b'c:f:~'):
-            frame_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
+            frame_objects[k.decode().split(':')[2]] = struct.unpack_from('>Q', v)[0]
 
         video_count = self.get_count(MemoryGraph.video_count_key())
         video_objects = dict()
         for k,v in self.db.iterator(start=b'c:v:', stop=b'c:v:~'):
-            video_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
+            video_objects[k.decode().split(':')[2]] = struct.unpack_from('>Q', v)[0]
 
         pixel_count = self.get_count(MemoryGraph.pixel_count_key())
         pixel_objects = dict()
         for k,v in self.db.iterator(start=b'c:p:', stop=b'c:p:~'):
-            pixel_objects[k.decode()] = struct.unpack_from('>Q', v)[0]
+            pixel_objects[k.decode().split(':')[2]] = struct.unpack_from('>Q', v)[0]
 
         return {
             "observation_count": observation_count,
