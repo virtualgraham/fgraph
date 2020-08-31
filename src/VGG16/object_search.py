@@ -4,6 +4,7 @@ from os.path import join
 import random
 import math 
 import re 
+from datetime import datetime
 
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
@@ -15,7 +16,7 @@ from itertools import chain
 mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
 db_path = "../../data/table_objects_mask.db"
-max_frames = 7*5 # 30*30
+max_frames = 30*30
 walker_count = 3
 window_size = 32
 stride = 16
@@ -23,7 +24,7 @@ center_size = 16
 center_threshold = center_size*center_size*0.9
 grid_margin = 16
 walk_length = 7
-max_elements=1000000
+max_elements=1200000
 
 def key_point_grid(orb, frame, obj_frame, stride):
 
@@ -147,7 +148,7 @@ def run(file):
 
                 ########
                 
-                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.3, community_dis=0.3, k=100)
+                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.35, community_dis=0.25, k=100)
                 print("similar_clusters", similar_clusters)
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
@@ -228,7 +229,14 @@ def run(file):
             mislabeled_pixels += len(video_frame[False] - video_frame[True])
 
     
+    print("")
+    print(datetime.now())
+    print(object_name)
+    print("len(observations)", len(observations))
+    print("")
+
     counts = memory_graph.get_counts()
+
 
     if len(observations) > 0:
         observations_of_sample_class = labeled_observations / len(observations)
@@ -236,6 +244,11 @@ def run(file):
     else:
         observations_of_sample_class = None
         observations_not_of_sample_class = None
+    
+    print("observations_of_sample_class", observations_of_sample_class)
+    print("observations_not_of_sample_class", observations_not_of_sample_class)
+    
+    print("")
 
     if counts["observation_objects"][object_name] > 0:
         observations_true_positive = labeled_observations / counts["observation_objects"][object_name]
@@ -244,12 +257,20 @@ def run(file):
         observations_true_positive = None
         observations_false_negative = None
 
+    print("observations_true_positive", observations_true_positive, labeled_observations, counts["observation_objects"][object_name])
+    print("observations_false_negative", observations_false_negative)
+
     if (counts["observation_count"] - counts["observation_objects"][object_name]) > 0:
         observations_false_positive = mislabeled_observations / (counts["observation_count"] - counts["observation_objects"][object_name])
         observations_true_negative = 1 - observations_false_positive
     else:
         observations_false_positive = None
         observations_true_negative = None
+
+    print("observations_false_positive", observations_false_positive, mislabeled_observations, (counts["observation_count"] - counts["observation_objects"][object_name]))
+    print("observations_true_negative", observations_true_negative)
+   
+    print("")
 
     if counts["video_objects"][object_name] > 0:
         video_true_positive = len(labeled_video_files) / counts["video_objects"][object_name]
@@ -258,12 +279,20 @@ def run(file):
         video_true_positive = None
         video_false_negative = None
 
+    print("video_true_positive", video_true_positive, len(labeled_video_files), counts["video_objects"][object_name])
+    print("video_false_negative", video_false_negative)
+    
     if (counts["video_count"] - counts["video_objects"][object_name]) > 0:
         video_false_positive = len(mislabeled_video_files) / (counts["video_count"] - counts["video_objects"][object_name])
         video_true_negative = 1 - video_false_positive
     else:
         video_false_positive = None
         video_true_negative = None
+
+    print("video_false_positive", video_false_positive, len(mislabeled_video_files), (counts["video_count"] - counts["video_objects"][object_name]))
+    print("video_true_negative", video_true_negative)
+    
+    print("")
 
     if counts["frame_objects"][object_name] > 0:
         frame_true_positive = labeled_frames / counts["frame_objects"][object_name]
@@ -272,12 +301,20 @@ def run(file):
         frame_true_positive = None
         frame_false_negative = None
 
+    print("frame_true_positive", frame_true_positive, labeled_frames, counts["frame_objects"][object_name])
+    print("frame_false_negative", frame_false_negative)
+    
     if (counts["frame_count"] - counts["frame_objects"][object_name]) > 0:
         frame_false_positive = mislabeled_frames / (counts["frame_count"] - counts["frame_objects"][object_name])
         frame_true_negative = 1 - frame_false_positive
     else:
         frame_false_positive = None
         frame_true_negative = None
+
+    print("frame_false_positive", frame_false_positive, mislabeled_frames, (counts["frame_count"] - counts["frame_objects"][object_name]))
+    print("frame_true_negative", frame_true_negative)
+    
+    print("")
 
     if counts["pixel_objects"][object_name] > 0:
         pixel_true_positive = labeled_pixels / counts["pixel_objects"][object_name]
@@ -286,6 +323,10 @@ def run(file):
         pixel_true_positive = None
         pixel_false_negative = None
 
+    print("pixel_true_positive", pixel_true_positive, labeled_pixels, counts["pixel_objects"][object_name])
+    print("pixel_false_negative", pixel_false_negative)
+    
+
     if (counts["pixel_count"] - counts["pixel_objects"][object_name]) > 0:
         pixel_false_positive = mislabeled_pixels / (counts["pixel_count"] - counts["pixel_objects"][object_name])
         pixel_true_negative = 1 - pixel_false_positive
@@ -293,31 +334,9 @@ def run(file):
         pixel_false_positive = None
         pixel_true_negative = None
 
-    print("")
-    print("observations_count", len(observations))
-    print("")
-    print("observations_of_sample_class", observations_of_sample_class)
-    print("observations_not_of_sample_class", observations_not_of_sample_class)
-    print("")
-    print("observations_true_positive", observations_true_positive)
-    print("observations_false_negative", observations_false_negative)
-    print("observations_false_positive", observations_false_positive)
-    print("observations_true_negative", observations_true_negative)
-    print("")
-    print("video_true_positive", video_true_positive)
-    print("video_false_negative", video_false_negative)
-    print("video_false_positive", video_false_positive)
-    print("video_true_negative", video_true_negative)
-    print("")
-    print("frame_true_positive", frame_true_positive)
-    print("frame_false_negative", frame_false_negative)
-    print("frame_false_positive", frame_false_positive)
-    print("frame_true_negative", frame_true_negative)
-    print("")
-    print("pixel_true_positive", pixel_true_positive)
-    print("pixel_false_negative", pixel_false_negative)
-    print("pixel_false_positive", pixel_false_positive)
+    print("pixel_false_positive", pixel_false_positive, mislabeled_pixels, (counts["pixel_count"] - counts["pixel_objects"][object_name]))
     print("pixel_true_negative", pixel_true_negative)
+    
     print("")
 
-run("015_chain.mp4") 
+run("001_apple.mp4") 

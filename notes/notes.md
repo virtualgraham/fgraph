@@ -249,3 +249,92 @@ counts
     'c:p:opener': 4502877, 
     'c:p:shorts': 413}
 }
+
+
+
+2020-08-31 19:30:30.033350
+chain
+
+len(observations) 27015
+
+observations_of_sample_class 0.45530260966129926
+observations_not_of_sample_class 0.5446973903387007
+
+observations_true_positive 0.7628380054577028
+observations_false_negative 0.23716199454229725
+observations_false_positive 0.01451246405169455
+observations_true_negative 0.9854875359483054
+
+video_true_positive 1.0
+video_false_negative 0.0
+video_false_positive 1.2
+video_true_negative -0.19999999999999996
+
+frame_true_positive 0.7912254160363086
+frame_false_negative 0.20877458396369142
+frame_false_positive 0.7083000798084597
+frame_true_negative 0.29169992019154034
+
+pixel_true_positive 0.18729040716074855
+pixel_false_negative 0.8127095928392515
+pixel_false_positive 0.002771298406608047
+pixel_true_negative 0.9972287015933919
+
+
+2020-08-31 21:31:35.903478
+apple
+
+len(observations) 35585
+
+observations_of_sample_class 0.1859772376001124
+observations_not_of_sample_class 0.8140227623998876
+
+observations_true_positive 0.807368549469318
+observations_false_negative 0.19263145053068198
+observations_false_positive 0.02834668939594846
+observations_true_negative 0.9716533106040516
+
+video_true_positive 1.2
+video_false_negative -0.19999999999999996
+video_false_positive 1.0
+video_true_negative 0.0
+
+frame_true_positive 0.7195604395604396
+frame_false_negative 0.2804395604395604
+frame_false_positive 0.9547826086956521
+frame_true_negative 0.045217391304347876
+
+pixel_true_positive 0.1323916210630321
+pixel_false_negative 0.867608378936968
+pixel_false_positive 0.005506206306518058
+pixel_true_negative 0.9944937936934819
+
+
+
+2020-08-31 22:13:10.788614
+apple
+
+len(observations) 9968
+
+observations_of_sample_class 0.4623796147672552
+observations_not_of_sample_class 0.5376203852327448
+
+observations_true_positive 0.5622788825179944
+observations_false_negative 0.4377211174820056
+observations_false_positive 0.005244240289739628
+observations_true_negative 0.9947557597102604
+
+video_true_positive 1.2
+video_false_negative -0.19999999999999996
+video_false_positive 1.0
+video_true_negative 0.0
+
+frame_true_positive 0.6356043956043956
+frame_false_negative 0.36439560439560437
+frame_false_positive 0.4761739130434783
+frame_true_negative 0.5238260869565217
+
+pixel_true_positive 0.09596063561198184
+pixel_false_negative 0.9040393643880181
+pixel_false_positive 0.001048156454263501
+pixel_true_negative 0.9989518435457365
