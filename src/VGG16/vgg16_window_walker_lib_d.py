@@ -547,6 +547,8 @@ class MemoryGraph:
     def get_observations(self, observation_ids):
         return [self.get_observation(observation_id) for observation_id in observation_ids]
 
+    # TODO: each observation should have a list of the objects that where in the frame
+    
     # TODO: should be parallelizable safe (plyvel)
     def insert_observations(self, observations):
         observation_ids = self.generate_observation_ids(len(observations))
@@ -696,10 +698,21 @@ class MemoryGraph:
         return node_ids[:n]
 
 
+
+    def observations_for_nodes(self, node_ids):
+        observation_ids = []
+        for node_id in node_ids:
+            integrated_observations = self.get_integrated_observations(node_id)
+            observation_ids.extend(integrated_observations)
+            predicted_observations = self.get_predicted_observations(node_id)
+            observation_ids.extend(predicted_observations)
+        return observation_ids
+
+
     # the goal here is to search through the set of all communities and find all the ones that have a 
     # max_pool distance within a range of the max_pool distance of the query community
     # candidate communities are ones that contain any member that is near any member of the quey community
-    def search_group(self, features, feature_dis, community_dis, k=30):
+    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30):
         
         results = set()
         lab, dis = self.knn_query(features, k=k)
@@ -891,7 +904,33 @@ def extract_window(frame, pos, window_size):
 
     return frame[bottom_left[0]:top_right[0], bottom_left[1]:top_right[1]]
 
+def extract_window_pixels(pos, frame_shape, window_size):
+    half_w = window_size/2.0
+    bottom_left = [int(round(pos[0]-half_w)), int(round(pos[1]-half_w))]
+    top_right = [bottom_left[0]+window_size, bottom_left[1]+window_size]
+   
+    if bottom_left[0] < 0:
+        top_right[0] -= bottom_left[0]
+        bottom_left[0] = 0
 
+    if bottom_left[1] < 0:
+        top_right[1] -= bottom_left[1]
+        bottom_left[1] = 0
+
+    if top_right[0] >= frame_shape[0]:
+        bottom_left[0] -= (top_right[0]-frame_shape[0]+1)
+        top_right[0] = frame_shape[0]-1
+
+    if top_right[1] >= frame_shape[1]:
+        bottom_left[1] -= (top_right[1]-frame_shape[1]+1)
+        top_right[1] = frame_shape[1]-1
+
+    points = []
+    for y in range(bottom_left[0], top_right[0]):
+        for x in range(bottom_left[1], top_right[1]):
+            points.append((y,x))
+            
+    return points
 
 def key_point_grid(orb, frame, stride):
 

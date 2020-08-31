@@ -1,7 +1,6 @@
 stride = 16
 window_size = 32
-center_size = 32
-playback_random_walk_length = 10
+center_size = 16
 
 
 video_path = "../../media/tabletop_objects/videos/"
