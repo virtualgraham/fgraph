@@ -267,7 +267,8 @@ class MemoryGraph:
         ids = []
 
         for key, value in self.db.iterator(start=start, stop=stop):
-            node = MemoryGraph.decode_node(key, value) 
+            node = MemoryGraph.decode_node(value) 
+            node["id"] = MemoryGraph.decode_node_key(key)
 
             self.graph.add_node(node["id"])
             
@@ -325,16 +326,38 @@ class MemoryGraph:
     def numpy_from_bytes(b):
         return np.frombuffer(b, dtype=np.float32)
 
+    @staticmethod
+    def encode_community(community):
+        b = bytearray()
+        for c in community:
+            b.extend(struct.pack('>Q', c))
+        return bytes(b)
+
+    @staticmethod
+    def decode_community(b):
+        return [struct.unpack_from('>Q', b, offset=i*8)[0] for i in range(int(len(b)/8))]
+
     # node:[node_id] -> [node_data]
     @staticmethod
     def encode_node(node):
-        return MemoryGraph.numpy_to_bytes(node["f"])
+        b = MemoryGraph.numpy_to_bytes(node["f"])
+        
+        if "c" in node:
+           b +=  MemoryGraph.encode_community(node["c"])
+
+        return b
 
     @staticmethod
-    def decode_node(k, v):
+    def decode_node_key(k):
+        return struct.unpack_from('>Q', k)[0]
+
+    @staticmethod
+    def decode_node(v):
         node = dict()
-        node["f"] = MemoryGraph.numpy_from_bytes(v)
-        node["id"] = struct.unpack_from('>Q', k, offset=1)[0]
+        node["f"] = MemoryGraph.numpy_from_bytes(v[0:(4*512)])
+        if len(v) > 4*512:
+            node["c"] =  MemoryGraph.decode_community(v[4*512:])
+
         return node
 
     @staticmethod
@@ -367,6 +390,18 @@ class MemoryGraph:
         self.index.add_items([n["f"] for n in nodes], node_ids)
 
         return node_ids
+
+    def read_node(self, node_id):
+        b = self.db.get(MemoryGraph.node_key(node_id))
+        if b is None:
+            return None
+        else:
+            node = MemoryGraph.decode_node(b)
+            node["id"] = node_id
+            return node
+
+    def write_node(self, node):
+        self.db.put(MemoryGraph.node_key(node["id"]), MemoryGraph.encode_node(node))
 
     ######################
     # EDGES
@@ -686,6 +721,11 @@ class MemoryGraph:
     
 
     def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=0.20):
+        
+        node = self.read_node(node_id)
+        if "c" in node:
+            return node["c"]
+
         counts, node_ids = self.random_walk(node_id, walk_length, walk_trials)
 
         n = 0
@@ -695,7 +735,12 @@ class MemoryGraph:
                 break
             n += 1
 
-        return node_ids[:n]
+        community = node_ids[:n]
+        
+        node["c"] = community
+        self.write_node(node)
+
+        return community
 
 
 

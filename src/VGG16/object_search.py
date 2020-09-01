@@ -150,7 +150,7 @@ def run(file):
 
                 ########
                 
-                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.35, community_dis=0.20, k=100, walk_length=30, walk_trials=1000, member_portion=0.2)
+                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.35, community_dis=0.20, k=100, walk_length=10, walk_trials=1000, member_portion=0.2)
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
                 

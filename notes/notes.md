@@ -338,3 +338,59 @@ pixel_true_positive 0.09596063561198184
 pixel_false_negative 0.9040393643880181
 pixel_false_positive 0.001048156454263501
 pixel_true_negative 0.9989518435457365
+
+
+2020-09-01 02:32:40.966864
+apple
+len(observations) 10994
+
+observations_of_sample_class 0.4741677278515554
+observations_not_of_sample_class 0.5258322721484445
+
+observations_true_positive 0.5805769016594275 5213 8979
+observations_false_negative 0.41942309834057245
+observations_false_positive 0.005355649000714272 5781 1079421
+observations_true_negative 0.9946443509992857
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.6182458888018794 1579 2554
+frame_false_negative 0.38175411119812064
+frame_false_positive 0.5090027700831025 1470 2888
+frame_true_negative 0.49099722991689754
+
+pixel_true_positive 0.10141758383625014 4648285 45833127
+pixel_false_negative 0.8985824161637499
+pixel_false_positive 0.0010874161780444968 5403930 4969514073
+pixel_true_negative 0.9989125838219555
+
+
+2020-09-01 12:48:37.041876
+apple
+len(observations) 9527
+
+observations_of_sample_class 0.4697176445890627
+observations_not_of_sample_class 0.5302823554109373
+
+observations_true_positive 0.5459314383310967 4475 8197
+observations_false_negative 0.4540685616689033
+observations_false_positive 0.00494381450714025 5052 1021883
+observations_true_negative 0.9950561854928598
+
+video_true_positive 1.2 6 5
+video_false_negative -0.19999999999999996
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.625934065934066 1424 2275
+frame_false_negative 0.374065934065934
+frame_false_positive 0.4657391304347826 1339 2875
+frame_true_negative 0.5342608695652173
+
+pixel_true_positive 0.09311959976477088 3986229 42807626
+pixel_false_negative 0.9068804002352291
+pixel_false_positive 0.0010119212144539275 4759503 4703432374
+pixel_true_negative 0.9989880787855461
