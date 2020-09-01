@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import threading
 import re 
+from itertools import chain
 
 import numpy as np
 import cv2
@@ -22,7 +23,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 # from collections import Counter
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 300, accurate_prediction_limit = 10, distance_threshold = 0.1,  adjacency_radius = 3, prediction_history_length=4, identical_distance=0.01):
+    def __init__(self, memory_graph, knn = 300, accurate_prediction_limit = 10, distance_threshold = 0.1, adjacency_radius = 3, prediction_history_length=4, identical_distance=0.01):
 
         self.knn = knn
         self.accurate_prediction_limit = accurate_prediction_limit
@@ -67,72 +68,62 @@ class MemoryGraphWalker:
         observation_id = self.memory_graph.insert_observation(observation)
 
         tm.mark(s="insert_observation")
-        
-        tm.mark(l="find_correct_predictions", s="knn_query")
 
-        has_near_neighbor = False
+        if distances is not None and distances[0] <= self.distance_threshold: 
+            neighbor_nodes = set([l for l,d in zip(labels, distances) if d <= self.distance_threshold])
+        else:
+            neighbor_nodes = set()
+
+        stats["near_neighbors_count"] = len(neighbor_nodes)
+        # print("near_neighbors_count", len(neighbor_nodes))
+
         if distances is not None:
-            #print("Nearest Neighbor", d[0])
             stats["nearest_neighbor"] = distances[0]
-            has_near_neighbor = distances[0] <= self.distance_threshold
+
+        tm.mark(l="find_correct_predictions", s="knn_query")
 
         accurate_predictions = set()
         evaluated_ids = set()
 
         # find correct predictions and reinforce with adjacency
 
-        if adj and walker_id in self.predictions and has_near_neighbor:
+        
+
+        if adj and walker_id in self.predictions and len(neighbor_nodes) > 0:
 
             tm.mark(l="find_correct_predictions_inside")
 
-            predictions = [item for sublist in self.predictions[walker_id] for item in sublist]  
+            predictions = set(chain.from_iterable(self.predictions[walker_id]))
             
-            labels_set = set([l for l,d in zip(labels, distances) if d  <= self.distance_threshold])
-
+            print("len(predictions)", len(predictions))
             # if len(labels_set) == 0:
             #     stats["nearest_neighbor"]
             #     print("No neighbors in threshold distance")
             
+            add_predicted_observations = set()
+   
+            ###################
+            ###################
+            
             for pred in predictions:
-
-                tm.mark()
-
-                a = pred[0]
-                b = pred[1]
-
-                if b in evaluated_ids:
-                    continue
-
-                # these features come from the index and are normalized
-                # f = pred['candidate_for_similar_to_curr']["f"]
-
-                tm.mark(l="distance", a="before_distance")
-                
-                if b in labels_set:
-                    tm.mark(a="distance_found")
-                    # print("add_predicted_observations", b, observation_id)
-                    self.memory_graph.add_predicted_observations([b], [observation_id])
-                    tm.mark(a="add_predicted_observations")
-                    accurate_predictions.add(a)
-                    tm.mark(a="after_add_predicted_observations")
-                else:
-                    tm.mark(i="distance", a="distance_not_found")
-
-                tm.mark()
-
+                if pred[1] in neighbor_nodes:
+                    add_predicted_observations.add(pred[1])
+                    accurate_predictions.add(pred[0])
                 if len(accurate_predictions) >= self.accurate_prediction_limit:
-                    # print("Too many accurate_predictions")
                     break
+            
+            ###################
+            ###################
 
-                evaluated_ids.add(b)
-
-                tm.mark(a="add_evaluated_ids")
+            if len(add_predicted_observations) > 0 and len(accurate_predictions) < self.accurate_prediction_limit:
+                self.memory_graph.add_predicted_observations(add_predicted_observations, [observation_id]*len(add_predicted_observations))
 
             if len(predictions) > 0:
                 stats["predictions"] = len(predictions)
                 stats["accurate_predictions"] = len(accurate_predictions)
                 # print("Predictions", len(accurate_predictions), "of", len(predictions))
         
+
             tm.mark(si="find_correct_predictions_inside")
 
         # print("frame", t, pos)
@@ -172,33 +163,33 @@ class MemoryGraphWalker:
             self.predictions[walker_id] = []
 
         h = self.predictions[walker_id]
-        h.append([])
+        h.append(set())
         if len(h) > self.prediction_history_length:
             h.pop()
 
-        if self.memory_graph.index_count() >= self.knn and labels is not None and distances is not None:
+        # if self.memory_graph.index_count() >= self.knn len(neighbor_nodes) > 0:
 
-            similar = 0
+        similar = 0
+        
+        for label in neighbor_nodes: #knn#
+            # label = labels[n]
+            # distance = distances[n]
             
-            for n in range(self.knn):
-                label = labels[n]
-                distance = distances[n]
-                
-                if distance <= self.distance_threshold:
-                    # Found a previous similar observation
+            # if distance <= self.distance_threshold:
+                # Found a previous similar observation
 
-                    # find other observations that have been seen near this one
-                    # if label in community_cache:
-                    #     next_adjacencies = community_cache[label]
-                    # else:
-                    #     next_adjacencies = self.memory_graph.get_community(label, walk_trials=500, member_portion=100, save_to_db=False)
-                        
-                    next_adjacencies = self.memory_graph.get_adjacencies(label, self.adjacency_radius)
+                # find other observations that have been seen near this one
+                # if label in community_cache:
+                #     next_adjacencies = community_cache[label]
+                # else:
+                #     next_adjacencies = self.memory_graph.get_community(label, walk_trials=500, member_portion=100, save_to_db=False)
+                    
+            next_adjacencies = self.memory_graph.get_adjacencies(label, self.adjacency_radius)
 
-                    for n in next_adjacencies:
-                        self.predictions[walker_id][-1].append((label, n))
+            for n in next_adjacencies:
+                self.predictions[walker_id][-1].add((label, n))
 
-                    similar += 1
+            similar += 1
 
         tm.mark(s="make_predictions")
 
@@ -1337,6 +1328,8 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 has_accurate_predictions_count = 0
                 has_too_many_accurate_predictions_count = 0
                 adjacencies_inserted = 0
+                nn_gte_100 = 0
+                nn_gte_200 = 0
 
                 time_stats = dict()
 
@@ -1364,7 +1357,11 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                         is_identical_count += 1
                     if "adjacencies_inserted" in stats:
                         adjacencies_inserted += stats["adjacencies_inserted"]
-                    
+                    if "near_neighbors_count" in stats:
+                        if stats["near_neighbors_count"] >= 100:
+                            nn_gte_100 += 1
+                        if stats["near_neighbors_count"] >= 200:
+                            nn_gte_200 += 1
                     if keep_times:
                         for k, v in stats["time"].items():
                             if k not in time_stats:
@@ -1385,7 +1382,9 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                     "vid", video_file_count, 
                     "frame", t+1,
                     "start", restart_count, 
-                    "near", near_neighbor_count,
+                    "nn0", near_neighbor_count,
+                    "nn100", nn_gte_100,
+                    "nn200", nn_gte_200,
                     "iden", is_identical_count,
                     "pred", has_predictions_count,
                     "accu", has_accurate_predictions_count,
