@@ -685,13 +685,13 @@ class MemoryGraph:
         return zip(*sorted(zip(count, nodes), reverse=True))
     
 
-    def get_community(self, node_id):
-        counts, node_ids = self.random_walk(node_id, 10, 1000)
+    def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=0.20):
+        counts, node_ids = self.random_walk(node_id, walk_length, walk_trials)
 
         n = 0
         for i in range(len(counts)):
             count = counts[i]
-            if count < 200:
+            if count < walk_trials*member_portion:
                 break
             n += 1
 
@@ -712,7 +712,7 @@ class MemoryGraph:
     # the goal here is to search through the set of all communities and find all the ones that have a 
     # max_pool distance within a range of the max_pool distance of the query community
     # candidate communities are ones that contain any member that is near any member of the quey community
-    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30):
+    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=0.2):
         
         results = set()
         lab, dis = self.knn_query(features, k=k)
@@ -731,22 +731,23 @@ class MemoryGraph:
                 label = labels[i]
 
                 if label in visited_nodes:
-                    print("label in visited_nodes")
+                    # print("label in visited_nodes")
                     continue
                 visited_nodes.add(label)
 
-                community = self.get_community(label)
-                print("len(community)", len(community))
+                community = self.get_community(label, walk_length, walk_trials, member_portion)
+                # print("len(community)", len(community))
                 if len(community) == 0:
                     continue
                 community_features = np.array([self.get_node(c)["f"] for c in community])
                 community_features_max = np.max(community_features, axis=0)
                 d = self.distance(community_features_max, features_max)
-                print("distance", d)
+                # print("distance", d)
                 if d <= community_dis:
                     results.add(frozenset(community))
 
         return results
+
 
     def distance(self, a, b):
         if self.space == 'cosine':
@@ -1175,6 +1176,11 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
             mask = cv2.VideoCapture(join(mask_path,"mask_"+video_file))
             video = cv2.VideoCapture(join(video_path, video_file))
 
+            # objects: a set of object names
+            video_objects = object_names_from_video_file(video_file)
+            print("video_objects", video_objects)
+            memory_graph.increment_video_counts(video_objects)
+
             # walkers
             g_pos = [None for _ in range(walker_count)]
             pos = [None for _ in range(walker_count)]
@@ -1300,10 +1306,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
             mask.release()
             video.release()
 
-            # objects: a set of object names
-            video_objects = object_names_from_video_file(video_file)
-            print("video_objects", video_objects)
-            memory_graph.increment_video_counts(video_objects)
+
 
             # if r < (runs-1):
             #     memory_graph.save()
