@@ -36,7 +36,7 @@ def key_point_grid(orb, frame, obj_frame, stride):
 
     object_grid_locations = set()
 
-    print("grid_width", grid_width, "grid_height", grid_height)
+    #print("grid_width", grid_width, "grid_height", grid_height)
     for x in range(grid_width):
         for y in range(grid_height):
             p = (grid_offset_x + x * stride + 0.5 * stride, grid_offset_y + y * stride + 0.5 * stride)
@@ -44,9 +44,9 @@ def key_point_grid(orb, frame, obj_frame, stride):
             if extract_object(w, stride) is not None:
                 object_grid_locations.add((x, y))
     
-    print("len(object_grid_locations)", len(object_grid_locations))
+    #print("len(object_grid_locations)", len(object_grid_locations))
     kp = orb.detect(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), None)
-    print("len(kp)", len(kp))
+    #print("len(kp)", len(kp))
 
     grid = dict()
 
@@ -108,6 +108,8 @@ def run(file):
     observation_ids = set()
 
     for t in range(max_frames):
+        print("frame", t)
+
         mask_ret, mask_frame = mask.read()
         video_ret, video_frame = video.read()
 
@@ -149,7 +151,6 @@ def run(file):
                 ########
                 
                 similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.35, community_dis=0.20, k=100, walk_length=30, walk_trials=1000, member_portion=0.2)
-                print("len(similar_clusters)", len(similar_clusters))
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
                 

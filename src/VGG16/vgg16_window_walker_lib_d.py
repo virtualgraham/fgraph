@@ -724,6 +724,8 @@ class MemoryGraph:
             labels = lab[j]
             distances = dis[j]
 
+            len_results = len(results)
+
             for i in range(k):
                 if distances[i] > feature_dis:
                     # break because distance are sorted and only increase from here
@@ -745,6 +747,8 @@ class MemoryGraph:
                 # print("distance", d)
                 if d <= community_dis:
                     results.add(frozenset(community))
+
+            print("found", len(results) - len_results, "communities")
 
         return results
 
