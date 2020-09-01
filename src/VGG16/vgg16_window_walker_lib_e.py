@@ -95,7 +95,6 @@ class MemoryGraphWalker:
 
             predictions = set(chain.from_iterable(self.predictions[walker_id]))
             
-            print("len(predictions)", len(predictions))
             # if len(labels_set) == 0:
             #     stats["nearest_neighbor"]
             #     print("No neighbors in threshold distance")
