@@ -23,7 +23,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 # from collections import Counter
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 300, accurate_prediction_limit = 10, distance_threshold = 0.1, adjacency_radius = 3, prediction_history_length=4, identical_distance=0.01):
+    def __init__(self, memory_graph, knn = 30, accurate_prediction_limit = 10, distance_threshold = 0.1, adjacency_radius = 3, prediction_history_length=4, identical_distance=0.01):
 
         self.knn = knn
         self.accurate_prediction_limit = accurate_prediction_limit
@@ -177,14 +177,13 @@ class MemoryGraphWalker:
             # if distance <= self.distance_threshold:
                 # Found a previous similar observation
 
-                # find other observations that have been seen near this one
-                # if label in community_cache:
-                #     next_adjacencies = community_cache[label]
-                # else:
-                #     next_adjacencies = self.memory_graph.get_community(label, walk_trials=500, member_portion=100, save_to_db=False)
+            #find other observations that have been seen near this one
+            if label in community_cache:
+                next_adjacencies = community_cache[label]
+            else:
+                next_adjacencies = self.memory_graph.get_community(label, walk_trials=200, member_portion=20, save_to_db=False)
                     
-            next_adjacencies = self.memory_graph.get_adjacencies(label, self.adjacency_radius)
-
+            # next_adjacencies = self.memory_graph.get_adjacencies(label, self.adjacency_radius)
             for n in next_adjacencies:
                 self.predictions[walker_id][-1].add((label, n))
 
@@ -204,7 +203,7 @@ MAX_KEY_VALUE = 18446744073709551615
 
 class MemoryGraph:
     #def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=600, M=64, rebuild_index=False):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=300, M=64, rebuild_index=False):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
@@ -1316,7 +1315,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 objects = extract_objects(obj_frame, pos, center_size)
                 ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, objects, keep_times)
 
-                print("observations with objects", len([x for x in objects if x is not None]))
+                observations_with_objects = len([x for x in objects if x is not None])
 
                 t3.mark(p="TIME add_parrelell_observations")
 
@@ -1327,8 +1326,8 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 has_accurate_predictions_count = 0
                 has_too_many_accurate_predictions_count = 0
                 adjacencies_inserted = 0
-                nn_gte_100 = 0
-                nn_gte_200 = 0
+                nn_gte_10 = 0
+                nn_gte_20 = 0
 
                 time_stats = dict()
 
@@ -1357,10 +1356,10 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                     if "adjacencies_inserted" in stats:
                         adjacencies_inserted += stats["adjacencies_inserted"]
                     if "near_neighbors_count" in stats:
-                        if stats["near_neighbors_count"] >= 100:
-                            nn_gte_100 += 1
-                        if stats["near_neighbors_count"] >= 200:
-                            nn_gte_200 += 1
+                        if stats["near_neighbors_count"] >= 10:
+                            nn_gte_10 += 1
+                        if stats["near_neighbors_count"] >= 20:
+                            nn_gte_20 += 1
                     if keep_times:
                         for k, v in stats["time"].items():
                             if k not in time_stats:
@@ -1371,7 +1370,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 t3.mark(p="TIME write patches + compute stats")
 
                 object_pixels = pixel_counts(obj_frame, center_size)
-                print("object_pixels", object_pixels)
+                # print("object_pixels", object_pixels)
                 memory_graph.increment_frame_counts(obj_frame.shape[0]*obj_frame.shape[1], object_pixels)
 
                 if keep_times:
@@ -1381,13 +1380,14 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                     "vid", video_file_count, 
                     "frame", t+1,
                     "start", restart_count, 
-                    "nn0", near_neighbor_count,
-                    "nn100", nn_gte_100,
-                    "nn200", nn_gte_200,
+                    "nn00", near_neighbor_count,
+                    "nn10", nn_gte_10,
+                    "nn20", nn_gte_20,
                     "iden", is_identical_count,
                     "pred", has_predictions_count,
                     "accu", has_accurate_predictions_count,
                     "many", has_too_many_accurate_predictions_count,
+                    "obj", observations_with_objects,
                     "adj", adjacencies_inserted,
                 )
 
