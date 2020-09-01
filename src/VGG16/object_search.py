@@ -349,7 +349,7 @@ def search_file(file, memory_graph, cnn, orb):
 
 
 
-files [
+files = [
     '001_apple.mp4',
     '002_apple.mp4',
     '003_apple.mp4',
