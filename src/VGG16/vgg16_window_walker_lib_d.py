@@ -19,8 +19,7 @@ import plyvel
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-
-
+# from collections import Counter
 
 class MemoryGraphWalker:
     def __init__(self, memory_graph, knn = 100, accurate_prediction_limit = 10, distance_threshold = 0.1,  adjacency_radius = 2, identical_distance=0.01):
@@ -768,16 +767,24 @@ class MemoryGraph:
         return observation_ids
 
 
+    from collections import Counter
+
     # the goal here is to search through the set of all communities and find all the ones that have a 
     # max_pool distance within a range of the max_pool distance of the query community
     # candidate communities are ones that contain any member that is near any member of the quey community
     def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=200):
         
         results = set()
+
+        if len(features) == 0:
+            return results
+
         lab, dis = self.knn_query(features, k=k)
         features_max = np.max(features, axis=0)
         
         visited_nodes = set()
+
+        # degrees = []
 
         for j in range(len(features)):
             labels = lab[j]
@@ -791,6 +798,8 @@ class MemoryGraph:
                     break
                 label = labels[i]
 
+                # degrees.append(self.graph.degree[label])
+                
                 if label in visited_nodes:
                     # print("label in visited_nodes")
                     continue
@@ -808,6 +817,8 @@ class MemoryGraph:
                     results.add(frozenset(community))
 
             # print("found", len(results) - len_results, "communities")
+
+        # print(Counter(degrees))
 
         return results
 
