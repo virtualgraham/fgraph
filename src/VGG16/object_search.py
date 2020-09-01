@@ -88,12 +88,17 @@ def next_pos(kp_grid, shape, g_pos, walk_t, walk_length, stride):
     return loc, pos, False
 
 
-def run(file):
-    print(file)
-
+def search(files):
     memory_graph = MemoryGraph(db_path, space='cosine', dim=512, max_elements=max_elements)
     cnn = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
+
+    for file in files:
+        search_file(file, memory_graph, cnn, orb)
+
+
+def search_file(file, memory_graph, cnn, orb):
+    print("search", file)
 
     mask = cv2.VideoCapture(join(mask_path,"mask_"+file))
     video = cv2.VideoCapture(join(video_path,file))
@@ -109,7 +114,8 @@ def run(file):
     observation_ids = set()
 
     for t in range(max_frames):
-        # print("frame", t)
+        if t % 7 == 0:
+            print("frame", t)
 
         mask_ret, mask_frame = mask.read()
         video_ret, video_frame = video.read()
@@ -343,51 +349,56 @@ def run(file):
 
 
 
-run('001_apple.mp4')
-run('002_apple.mp4')
-run('003_apple.mp4')
-run('004_bear.mp4')
-run('005_bear.mp4')
-run('006_bear.mp4')
-run('007_brush.mp4')
-run('008_brush.mp4')
-run('009_brush.mp4')
-run('010_carrot.mp4')
-run('011_carrot.mp4')
-run('012_carrot.mp4')
-run('013_chain.mp4')
-run('014_chain.mp4')
-run('015_chain.mp4')
-run('016_clippers.mp4')
-run('017_clippers.mp4')
-run('018_clippers.mp4')
-run('019_cologne.mp4')
-run('020_cologne.mp4')
-run('021_cologne.mp4')
-run('022_cup.mp4')
-run('023_cup.mp4')
-run('024_cup.mp4')
-run('025_flowers.mp4')
-run('026_flowers.mp4')
-run('027_flowers.mp4')
-run('028_hanger.mp4')
-run('029_hanger.mp4')
-run('030_hanger.mp4')
-run('031_ketchup.mp4')
-run('032_ketchup.mp4')
-run('033_ketchup.mp4')
-run('034_notebook.mp4')
-run('035_notebook.mp4')
-run('036_notebook.mp4')
-run('037_opener.mp4')
-run('038_opener.mp4')
-run('039_opener.mp4')
-run('040_pepper.mp4')
-run('041_pepper.mp4')
-run('042_pepper.mp4')
-run('043_rock.mp4')
-run('044_rock.mp4')
-run('045_rock.mp4')
-run('046_shorts.mp4')
-run('047_shorts.mp4')
-run('048_shorts.mp4')
+files [
+    '001_apple.mp4',
+    '002_apple.mp4',
+    '003_apple.mp4',
+    '004_bear.mp4',
+    '005_bear.mp4',
+    '006_bear.mp4',
+    '007_brush.mp4',
+    '008_brush.mp4',
+    '009_brush.mp4',
+    '010_carrot.mp4',
+    '011_carrot.mp4',
+    '012_carrot.mp4',
+    '013_chain.mp4',
+    '014_chain.mp4',
+    '015_chain.mp4',
+    '016_clippers.mp4',
+    '017_clippers.mp4',
+    '018_clippers.mp4',
+    '019_cologne.mp4',
+    '020_cologne.mp4',
+    '021_cologne.mp4',
+    '022_cup.mp4',
+    '023_cup.mp4',
+    '024_cup.mp4',
+    '025_flowers.mp4',
+    '026_flowers.mp4',
+    '027_flowers.mp4',
+    '028_hanger.mp4',
+    '029_hanger.mp4',
+    '030_hanger.mp4',
+    '031_ketchup.mp4',
+    '032_ketchup.mp4',
+    '033_ketchup.mp4',
+    '034_notebook.mp4',
+    '035_notebook.mp4',
+    '036_notebook.mp4',
+    '037_opener.mp4',
+    '038_opener.mp4',
+    '039_opener.mp4',
+    '040_pepper.mp4',
+    '041_pepper.mp4',
+    '042_pepper.mp4',
+    '043_rock.mp4',
+    '044_rock.mp4',
+    '045_rock.mp4',
+    '046_shorts.mp4',
+    '047_shorts.mp4',
+    '048_shorts.mp4',
+]
+
+
+search(files)
