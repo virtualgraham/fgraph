@@ -326,6 +326,11 @@ class MemoryGraph:
     def numpy_from_bytes(b):
         return np.frombuffer(b, dtype=np.float32)
 
+
+    @staticmethod
+    def community_key(node_id, walk_length, walk_trials, member_portion):
+        return b'y' + struct.pack('>Q', node_id) + b':' + struct.pack('>I', walk_length) + b':' + struct.pack('>I', walk_trials) + b':' + struct.pack('>I', member_portion)
+
     @staticmethod
     def encode_community(community):
         b = bytearray()
@@ -341,10 +346,8 @@ class MemoryGraph:
     @staticmethod
     def encode_node(node):
         b = MemoryGraph.numpy_to_bytes(node["f"])
-        
-        if "c" in node:
-           b +=  MemoryGraph.encode_community(node["c"])
-
+        # if "c" in node:
+        #    b +=  MemoryGraph.encode_community(node["c"])
         return b
 
     @staticmethod
@@ -355,9 +358,8 @@ class MemoryGraph:
     def decode_node(v):
         node = dict()
         node["f"] = MemoryGraph.numpy_from_bytes(v[0:(4*512)])
-        if len(v) > 4*512:
-            node["c"] =  MemoryGraph.decode_community(v[4*512:])
-
+        # if len(v) > 4*512:
+        #     node["c"] =  MemoryGraph.decode_community(v[4*512:])
         return node
 
     @staticmethod
@@ -402,6 +404,15 @@ class MemoryGraph:
 
     def write_node(self, node):
         self.db.put(MemoryGraph.node_key(node["id"]), MemoryGraph.encode_node(node))
+
+    def read_community(self, node_id, walk_length, walk_trials, member_portion):
+        b = self.db.get(MemoryGraph.community_key(node_id, walk_length, walk_trials, member_portion))
+        if b is None:
+            return None
+        return MemoryGraph.decode_community(b)
+
+    def write_community(self, node_id, walk_length, walk_trials, member_portion, community):
+        self.db.put(MemoryGraph.community_key(node_id, walk_length, walk_trials, member_portion), MemoryGraph.encode_community(community))
 
     ######################
     # EDGES
@@ -684,6 +695,8 @@ class MemoryGraph:
 
     # TODO: should be parallelizable safe (hnswlib)
     def knn_query(self, feats, k=1):
+        if len(feats) == 0:
+            return ([],[])
         return self.index.knn_query(feats, k)   
 
     # TODO: should be parallelizable safe (hnswlib)
@@ -720,25 +733,26 @@ class MemoryGraph:
         return zip(*sorted(zip(count, nodes), reverse=True))
     
 
-    def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=0.20):
+    def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=200):
         
-        node = self.read_node(node_id)
-        if "c" in node:
-            return node["c"]
+        community = self.read_community(node_id, walk_length, walk_trials, member_portion)
+        if community is not None:
+            # print("read community")
+            return community
 
         counts, node_ids = self.random_walk(node_id, walk_length, walk_trials)
 
         n = 0
         for i in range(len(counts)):
             count = counts[i]
-            if count < walk_trials*member_portion:
+            if count < member_portion:
                 break
             n += 1
 
         community = node_ids[:n]
         
-        node["c"] = community
-        self.write_node(node)
+        # print("write community")
+        self.write_community(node_id, walk_length, walk_trials, member_portion, community)
 
         return community
 
@@ -757,7 +771,7 @@ class MemoryGraph:
     # the goal here is to search through the set of all communities and find all the ones that have a 
     # max_pool distance within a range of the max_pool distance of the query community
     # candidate communities are ones that contain any member that is near any member of the quey community
-    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=0.2):
+    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=200):
         
         results = set()
         lab, dis = self.knn_query(features, k=k)

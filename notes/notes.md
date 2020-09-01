@@ -394,3 +394,88 @@ pixel_true_positive 0.09311959976477088 3986229 42807626
 pixel_false_negative 0.9068804002352291
 pixel_false_positive 0.0010119212144539275 4759503 4703432374
 pixel_true_negative 0.9989880787855461
+
+
+2020-09-01 05:47:06.692432
+apple
+len(observations) 16802
+
+observations_of_sample_class 0.32269967860968934
+observations_not_of_sample_class 0.6773003213903106
+
+observations_true_positive 0.6038534357946319 5422 8979
+observations_false_negative 0.3961465642053681
+observations_false_positive 0.010542689089799068 11380 1079421
+observations_true_negative 0.989457310910201
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.6503523884103367 1661 2554
+frame_false_negative 0.3496476115896633
+frame_false_positive 0.7236842105263158 2090 2888
+frame_true_negative 0.2763157894736842
+
+pixel_true_positive 0.1035045459586469 4743937 45833127
+pixel_false_negative 0.8964954540413531
+pixel_false_positive 0.002122281342818123 10546707 4969514073
+pixel_true_negative 0.9978777186571819
+
+
+
+2020-09-01 05:38:57.608583
+apple
+len(observations) 10549
+
+observations_of_sample_class 0.5078206465067779
+observations_not_of_sample_class 0.49217935349322206
+
+observations_true_positive 0.5966143223076067 5357 8979
+observations_false_negative 0.4033856776923933
+observations_false_positive 0.004809986094396904 5192 1079421
+observations_true_negative 0.9951900139056031
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.6601409553641346 1686 2554
+frame_false_negative 0.33985904463586536
+frame_false_positive 0.4650277008310249 1343 2888
+frame_true_negative 0.5349722991689752
+
+pixel_true_positive 0.10187046587504274 4669042 45833127
+pixel_false_negative 0.8981295341249572
+pixel_false_positive 0.0009738249915204536 4839437 4969514073
+pixel_true_negative 0.9990261750084796
+
+
+2020-09-01 05:30:29.342974
+apple
+len(observations) 9965
+
+observations_of_sample_class 0.5010536879076769
+observations_not_of_sample_class 0.4989463120923231
+
+observations_true_positive 0.5560752867802651 4993 8979
+observations_false_negative 0.4439247132197349
+observations_false_positive 0.0046061731242953395 4972 1079421
+observations_true_negative 0.9953938268757047
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.6225528582615505 1590 2554
+frame_false_negative 0.3774471417384495
+frame_false_positive 0.4809556786703601 1389 2888
+frame_true_negative 0.5190443213296398
+
+pixel_true_positive 0.09801816489632051 4492479 45833127
+pixel_false_negative 0.9019818351036795
+pixel_false_positive 0.0009494616436716548 4718363 4969514073
+pixel_true_negative 0.9990505383563284
