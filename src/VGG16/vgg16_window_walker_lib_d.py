@@ -793,7 +793,7 @@ class MemoryGraph:
                 if d <= community_dis:
                     results.add(frozenset(community))
 
-            print("found", len(results) - len_results, "communities")
+            # print("found", len(results) - len_results, "communities")
 
         return results
 
