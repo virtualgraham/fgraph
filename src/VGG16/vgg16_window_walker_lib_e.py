@@ -22,7 +22,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 # from collections import Counter
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 100, accurate_prediction_limit = 10, distance_threshold = 0.1,  adjacency_radius = 3, prediction_history_length=4, identical_distance=0.01):
+    def __init__(self, memory_graph, knn = 300, accurate_prediction_limit = 10, distance_threshold = 0.1,  adjacency_radius = 3, prediction_history_length=4, identical_distance=0.01):
 
         self.knn = knn
         self.accurate_prediction_limit = accurate_prediction_limit
@@ -214,7 +214,7 @@ MAX_KEY_VALUE = 18446744073709551615
 
 class MemoryGraph:
     #def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=400, M=64, rebuild_index=False):
+    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=600, M=64, rebuild_index=False):
         self.space = space
         self.dim = dim
         self.max_elements = max_elements
