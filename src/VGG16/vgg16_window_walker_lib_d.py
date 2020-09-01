@@ -22,7 +22,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 # from collections import Counter
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 100, accurate_prediction_limit = 10, distance_threshold = 0.1,  adjacency_radius = 2, identical_distance=0.01):
+    def __init__(self, memory_graph, knn = 100, accurate_prediction_limit = 10, distance_threshold = 0.2,  adjacency_radius = 3, identical_distance=0.02):
 
         self.knn = knn
         self.accurate_prediction_limit = accurate_prediction_limit
@@ -36,24 +36,26 @@ class MemoryGraphWalker:
 
 
     def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects, keep_times=False):
+        community_cache = dict()
+
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
         else:
             labels = [None for i in range(len(feats))]
             distances = [None for i in range(len(feats))]
 
-        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, keep_times) for i in range(len(feats))]
+        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache, keep_times) for i in range(len(feats))]
 
 
     def add_observation(self, file, t, pos, adj, feats, patch, obj, walker_id, keep_times=False):
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query([feats], k = self.knn)
 
-        return self._add_observation(file, t, pos, adj, feats, patch, obj, labels[0], distances[0], i, keep_times=keep_times)
+        return self._add_observation(file, t, pos, adj, feats, patch, obj, labels[0], distances[0], i, dict(), keep_times=keep_times)
         
 
     # TODO: should be parallelizable
-    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, keep_times=False):
+    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, community_cache, keep_times=False):
  
         stats = {"adj":adj}
 
@@ -179,6 +181,11 @@ class MemoryGraphWalker:
                     # Found a previous similar observation
 
                     # find other observations that have been seen near this one
+                    # if label in community_cache:
+                    #     next_adjacencies = community_cache[label]
+                    # else:
+                    #     next_adjacencies = self.memory_graph.get_community(label, walk_trials=500, member_portion=100, save_to_db=False)
+                        
                     next_adjacencies = self.memory_graph.get_adjacencies(label, self.adjacency_radius)
 
                     for n in next_adjacencies:
@@ -538,7 +545,7 @@ class MemoryGraph:
         bt = struct.pack('>I', observation["t"]) # 4 bytes
         by = struct.pack('>d', observation["y"]) # 8 bytes
         bx = struct.pack('>d', observation["x"]) # 8 bytes
-        bpatch = observation["patch"].tobytes() # 3072 bytes
+        #bpatch = observation["patch"].tobytes() # 3072 bytes
 
         if "o" in observation and observation["o"] is not None:
             bo = observation["o"].encode()
@@ -550,7 +557,7 @@ class MemoryGraph:
         bfile = observation["file"].encode()
         bfilelen = struct.pack('>H', len(bfile)) # 2 bytes
         
-        return bt + by + bx  + bpatch + bolen + bo + bfilelen + bfile
+        return bt + by + bx + bolen + bo + bfilelen + bfile
 
 
     @staticmethod
@@ -559,9 +566,9 @@ class MemoryGraph:
         observation["t"] = struct.unpack_from('>I', b, offset=0)[0]
         observation["y"] = struct.unpack_from('>d', b, offset=4)[0]
         observation["x"] = struct.unpack_from('>d', b, offset=12)[0]
-        observation["patch"] = np.frombuffer(b[20:3092], dtype=np.uint8).reshape(32, 32, 3)
+        # observation["patch"] = np.frombuffer(b[20:3092], dtype=np.uint8).reshape(32, 32, 3)
 
-        offset = 3092
+        offset = 20
         olen = struct.unpack_from('>H', b, offset=offset)[0]
         offset += 2
         if olen > 0:
@@ -675,15 +682,17 @@ class MemoryGraph:
 
     # TODO: should be parallelizable safe (networkx)
     def get_adjacencies(self, node_id, radius):
-        return self._neighbors(node_id, radius)
+        return self._neighbors(node_id, radius, set())
         
 
-    def _neighbors(self, v, radius, depth=0):
+    def _neighbors(self, v, radius, path):
         result = set()
         for w in self.graph.neighbors(v):
+            if w in path:
+                continue
             result.add(w)
-            if depth + 1 < radius:
-                result.update(self._neighbors(w, radius, depth+1))
+            if len(path) + 1 < radius:
+                result.update(self._neighbors(w, radius, path.union({w})))
         return result
 
     # TODO: should be parallelizable safe (networkx)
@@ -732,12 +741,14 @@ class MemoryGraph:
         return zip(*sorted(zip(count, nodes), reverse=True))
     
 
-    def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=200):
+
+    def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=200, save_to_db=True):
         
-        community = self.read_community(node_id, walk_length, walk_trials, member_portion)
-        if community is not None:
-            # print("read community")
-            return community
+        if save_to_db:
+            community = self.read_community(node_id, walk_length, walk_trials, member_portion)
+            if community is not None:
+                # print("read community")
+                return community
 
         counts, node_ids = self.random_walk(node_id, walk_length, walk_trials)
 
@@ -750,8 +761,8 @@ class MemoryGraph:
 
         community = node_ids[:n]
         
-        # print("write community")
-        self.write_community(node_id, walk_length, walk_trials, member_portion, community)
+        if save_to_db:
+            self.write_community(node_id, walk_length, walk_trials, member_portion, community)
 
         return community
 
@@ -1340,7 +1351,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                     if "accurate_predictions" in stats:
                         if stats["accurate_predictions"] > 0:
                             has_accurate_predictions_count += 1
-                        if stats["accurate_predictions"] >= 10:
+                        if stats["accurate_predictions"] >= memory_graph_walker.accurate_prediction_limit:
                             has_too_many_accurate_predictions_count += 1
                     if "identical" in stats and stats["identical"]:
                         is_identical_count += 1
