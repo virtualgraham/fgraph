@@ -273,6 +273,7 @@ class MemoryGraph:
 
             n += 1
             if n % 1000 == 0:
+                print(n)
                 self.index.add_items(feats, ids)
                 feats = []
                 ids = []
