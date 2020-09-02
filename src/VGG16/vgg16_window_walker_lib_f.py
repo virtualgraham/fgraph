@@ -14,8 +14,9 @@ from itertools import chain
 import numpy as np
 import cv2
 import hnswlib
-import networkx as nx
+# import networkx as nx
 import plyvel
+import community_walk_graph as cwg
 
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
@@ -167,27 +168,33 @@ class MemoryGraphWalker:
 
         # if self.memory_graph.index_count() >= self.knn len(neighbor_nodes) > 0:
 
-        similar = 0
-        
-        for label in neighbor_nodes: #knn#
-            # label = labels[n]
-            # distance = distances[n]
-            
-            # if distance <= self.distance_threshold:
-                # Found a previous similar observation
+        neighbor_nodes_list = list()
+        multi_next_adjacencies = list()
+        neighbor_nodes_list_not_cached = list()
 
-            #find other observations that have been seen near this one
+        for label in neighbor_nodes:
             if label in community_cache:
-                next_adjacencies = community_cache[label]
+                # print("cached")
+                neighbor_nodes_list.append(label)
+                multi_next_adjacencies.append(community_cache[label])
             else:
-                next_adjacencies = self.memory_graph.get_community(label, walk_trials=200, member_portion=20, save_to_db=False)
-                community_cache[label] = next_adjacencies
-                
-            # next_adjacencies = self.memory_graph.get_adjacencies(label, self.adjacency_radius)
+                # print("not cached")
+                neighbor_nodes_list_not_cached.append(label)
+        
+        communties_not_cached = self.memory_graph.get_communities(neighbor_nodes_list_not_cached, walk_trials=200, member_portion=20)
+
+        for i in range(len(neighbor_nodes_list_not_cached)):
+            community_cache[neighbor_nodes_list_not_cached[i]] = communties_not_cached[i]
+
+        neighbor_nodes_list.extend(neighbor_nodes_list_not_cached)
+        multi_next_adjacencies.extend(communties_not_cached)
+        
+        for i in range(len(neighbor_nodes)): #knn#
+            next_adjacencies = multi_next_adjacencies[i]
+            label = neighbor_nodes_list[i]
+
             for n in next_adjacencies:
                 self.predictions[walker_id][-1].add((label, n))
-
-            similar += 1
 
         tm.mark(s="make_predictions")
 
@@ -229,7 +236,7 @@ class MemoryGraph:
     def open(self, rebuild_index):
         self.db = plyvel.DB(self.path, create_if_missing=True)
 
-        self.graph = nx.Graph()
+        self.graph = cwg.new_graph()
 
         index_path = os.path.splitext(self.path)[0] + ".index"
         print("index_path", index_path)
@@ -245,19 +252,19 @@ class MemoryGraph:
             self.index.init_index(max_elements=self.max_elements, ef_construction=self.ef * 2, M=self.M)
             self.index.set_ef(self.ef)
             self.load_all_nodes()
-            if len(self.graph) > 0:
+            if cwg.len(self.graph) > 0:
                 self.save()
         
         self.load_all_edges()
 
-        print("MemoryGraph:", self.index.get_current_count(), "nodes", self.graph.number_of_edges(), "edges")
+        print("MemoryGraph:", self.index.get_current_count(), "nodes")
 
 
     def load_all_node_ids(self):
         start = MemoryGraph.node_key(0)
         stop = MemoryGraph.node_key(MAX_KEY_VALUE)
         for key in self.db.iterator(start=start, stop=stop, include_value=False):
-            self.graph.add_node(MemoryGraph.decode_node_key(key))
+            cwg.add_node(self.graph, MemoryGraph.decode_node_key(key))
 
 
     def load_all_nodes(self):
@@ -272,7 +279,7 @@ class MemoryGraph:
             node = MemoryGraph.decode_node(value) 
             node["id"] = MemoryGraph.decode_node_key(key)
 
-            self.graph.add_node(node["id"])
+            cwg.add_node(self.graph, node["id"])
             
             feats.append(node["f"])
             ids.append(node["id"])
@@ -295,7 +302,7 @@ class MemoryGraph:
         for b in self.db.iterator(start=start, stop=stop, include_value=False):
             from_node_id = struct.unpack_from('>Q', b, offset=1)[0]
             to_node_id = struct.unpack_from('>Q', b, offset=9)[0]
-            self.graph.add_edge(from_node_id, to_node_id)
+            cwg.add_edge(self.graph, from_node_id, to_node_id)
 
 
     #######################################################
@@ -387,7 +394,7 @@ class MemoryGraph:
 
         wb = self.db.write_batch()
         for node_id, node in zip(node_ids, nodes):
-            self.graph.add_node(node_id)
+            cwg.add_node(self.graph, node_id)
             wb.put(MemoryGraph.node_key(node_id), MemoryGraph.encode_node(node))
         wb.write()
 
@@ -676,25 +683,28 @@ class MemoryGraph:
         stop = MemoryGraph.integrated_nodes_key(observation_id, MAX_KEY_VALUE)
         return [struct.unpack_from('>Q', b, offset=9)[0] for b in self.db.iterator(start=start, stop=stop, include_value=False)]
 
-    # TODO: should be parallelizable safe (networkx)
+
     def get_adjacencies(self, node_id, radius):
-        return self._neighbors(node_id, radius, set())
+        cwg.neighbors(self.graph, node_id, radius)
+   
+   
+    #     return self._neighbors(node_id, radius, set())
         
 
-    def _neighbors(self, v, radius, path):
-        result = set()
-        for w in self.graph.neighbors(v):
-            if w in path:
-                continue
-            result.add(w)
-            if len(path) + 1 < radius:
-                result.update(self._neighbors(w, radius, path.union({w})))
-        return result
+    # def _neighbors(self, v, radius, path):
+    #     result = set()
+    #     for w in cwg.neighbors(self.graph, v, 1):
+    #         if w in path:
+    #             continue
+    #         result.add(w)
+    #         if len(path) + 1 < radius:
+    #             result.update(self._neighbors(w, radius, path.union({w})))
+    #     return result
 
     # TODO: should be parallelizable safe (networkx)
     def insert_adjacency(self, from_id, to_id):
         self.save_edges([(from_id, to_id)])
-        self.graph.add_edge(from_id, to_id)
+        cwg.add_edge(self.graph, from_id, to_id)
 
 
     # TODO: should be parallelizable safe (hnswlib)
@@ -705,37 +715,40 @@ class MemoryGraph:
 
     # TODO: should be parallelizable safe (hnswlib)
     def index_count(self):
-        return len(self.graph)
+        return cwg.len(self.graph)
         # return self.index.get_current_count()
 
 
-    def random_walk(self, start, l, trials):
-        visited = dict()
+    # def random_walk(self, start, l, trials):
+    #     visited = dict()
 
-        for _ in range(trials):
-            cur = start
-            for _ in range(l):
-                nei = list(self.graph.neighbors(cur))
-                if len(nei) == 0:
-                    break
-                cur = random.choice(nei)
-                if cur in visited:
-                    visited[cur] += 1
-                else:
-                    visited[cur] = 1
+    #     for _ in range(trials):
+    #         cur = start
+    #         for _ in range(l):
+    #             nei = list(cwg.neighbors(self.graph, cur, 1))
+    #             if len(nei) == 0:
+    #                 break
+    #             cur = random.choice(nei)
+    #             if cur in visited:
+    #                 visited[cur] += 1
+    #             else:
+    #                 visited[cur] = 1
     
-        nodes = []
-        count = []
+    #     nodes = []
+    #     count = []
 
-        if not bool(visited):
-            return [], []
+    #     if not bool(visited):
+    #         return [], []
 
-        for key, value in visited.items():
-            nodes.append(key)
-            count.append(value)
+    #     for key, value in visited.items():
+    #         nodes.append(key)
+    #         count.append(value)
 
-        return zip(*sorted(zip(count, nodes), reverse=True))
+    #     return zip(*sorted(zip(count, nodes), reverse=True))
     
+
+    def get_communities(self, node_ids, walk_length=10, walk_trials=1000, member_portion=200):
+        return cwg.communities(self.graph, node_ids, walk_length, walk_trials, member_portion)
 
 
     def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=200, save_to_db=True):
@@ -744,23 +757,25 @@ class MemoryGraph:
             community = self.read_community(node_id, walk_length, walk_trials, member_portion)
             if community is not None:
                 # print("read community")
-                return community
+                return set(community)
 
-        counts, node_ids = self.random_walk(node_id, walk_length, walk_trials)
+        # counts, node_ids = self.random_walk(node_id, walk_length, walk_trials)
 
-        n = 0
-        for i in range(len(counts)):
-            count = counts[i]
-            if count < member_portion:
-                break
-            n += 1
+        # n = 0
+        # for i in range(len(counts)):
+        #     count = counts[i]
+        #     if count < member_portion:
+        #         break
+        #     n += 1
 
-        community = node_ids[:n]
+        # community = node_ids[:n]
         
+        community = cwg.community(self.graph, node_id, walk_length, walk_trials, member_portion)
+
         if save_to_db:
             self.write_community(node_id, walk_length, walk_trials, member_portion, community)
 
-        return community
+        return set(community)
 
 
 
@@ -804,8 +819,6 @@ class MemoryGraph:
                     # break because distance are sorted and only increase from here
                     break
                 label = labels[i]
-
-                # degrees.append(self.graph.degree[label])
                 
                 if label in visited_nodes:
                     # print("label in visited_nodes")

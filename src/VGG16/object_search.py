@@ -15,7 +15,7 @@ from itertools import chain
 
 mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
-db_path = "../../data/table_objects_mask.db"
+db_path = "../../data/table_objects_e.db"
 max_frames = 30*30
 walker_count = 3
 window_size = 32
