@@ -54,7 +54,7 @@ class MemoryGraphWalker:
         neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= self.distance_threshold]))
 
         # TODO each community probably contains its own node, so probably it should be removed
-        community_cache_list = self.memory_graph.get_communities(neighbor_nodes_merged, walk_trials=200, member_portion=20)
+        community_cache_list = self.memory_graph.get_communities(neighbor_nodes_merged, walk_trials=1000, member_portion=100)
 
         community_cache = dict([(neighbor_nodes_merged[i], community_cache_list[i]) for i in range(len(neighbor_nodes_merged))])
 
