@@ -56,7 +56,7 @@ class MemoryGraphWalker:
         # TODO each community probably contains its own node, so probably it should be removed
         community_cache_list = self.memory_graph.get_communities(neighbor_nodes_merged, walk_trials=1000, member_portion=100)
 
-        community_cache = dict([(neighbor_nodes_merged[i], community_cache_list[i]) for i in range(len(neighbor_nodes_merged))])
+        community_cache = dict([(neighbor_nodes_merged[i], set(community_cache_list[i])) for i in range(len(neighbor_nodes_merged))])
 
         return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache, keep_times) for i in range(len(feats))]
 
@@ -104,8 +104,21 @@ class MemoryGraphWalker:
             tm.mark(l="find_correct_predictions_inside")
 
             tm.mark(l="chain_predictions_into_set")
+
+
             ######### This is very expensive operation ##########
-            predictions = set(chain.from_iterable(self.predictions[walker_id]))
+            # merged_predictions = dict()
+            
+            # for di in self.predictions[walker_id]:
+            #     for ky, va in di.items():
+            #         if ky in merged_predictions:
+            #             merged_predictions[ky].update(va)
+            #         else:
+            #             merged_predictions[ky] = va
+
+            # predictions = set.union(*self.predictions[walker_id])
+            # stats["prediction_count"] = len(predictions)
+            # predictions = set(chain.from_iterable(self.predictions[walker_id]))
             #########
             tm.mark(si="chain_predictions_into_set")
 
@@ -118,15 +131,32 @@ class MemoryGraphWalker:
    
             ###################
             ###################
+
             tm.mark(l="build_accurate_predictions_set")
 
-            for pred in predictions:
-                if pred[1] in neighbor_nodes:
-                    add_predicted_observations.add(pred[1]) # the node that is similar to the current observation
-                    if len(accurate_predictions) < self.accurate_prediction_limit:
-                        accurate_predictions.add(pred[0]) # the node that is similar to the previous observation
-                    else:
-                        break
+            has_predictions = False
+
+            # stats["large_community_size"] = 0
+
+            for di in self.predictions[walker_id]:
+                if len(di) > 0: has_predictions = True
+                for k, v in di.items():
+                    if len(v) > 40: print(len(v))
+                    u = v.intersection(neighbor_nodes)
+                    if len(u) > 0:
+                        add_predicted_observations.update(u) # the node that is similar to the current observation
+                        if len(accurate_predictions) < self.accurate_prediction_limit:
+                            accurate_predictions.add(k) # the node that is similar to the previous observation
+                        else:
+                            break
+
+            # for pred in predictions:
+            #     if pred[1] in neighbor_nodes:
+            #         add_predicted_observations.add(pred[1]) # the node that is similar to the current observation
+            #         if len(accurate_predictions) < self.accurate_prediction_limit:
+            #             accurate_predictions.add(pred[0]) # the node that is similar to the previous observation
+            #         else:
+            #             break
             
             tm.mark(si="build_accurate_predictions_set")
             ###################
@@ -139,8 +169,8 @@ class MemoryGraphWalker:
 
             tm.mark(si="add_predicted_observations")
 
-            if len(predictions) > 0:
-                stats["predictions"] = len(predictions)
+            if has_predictions:
+                stats["predictions"] = True
                 stats["accurate_predictions"] = len(accurate_predictions)
                 # print("Predictions", len(accurate_predictions), "of", len(predictions))
         
@@ -189,7 +219,7 @@ class MemoryGraphWalker:
             self.predictions[walker_id] = []
 
         h = self.predictions[walker_id]
-        h.append(set())
+        h.append(dict())
         if len(h) > self.prediction_history_length:
             h.pop()
 
@@ -217,10 +247,7 @@ class MemoryGraphWalker:
         # multi_next_adjacencies.extend(communties_not_cached)
         
         for label in neighbor_nodes: #knn#
-            next_adjacencies = community_cache[label]
-            for n in next_adjacencies:
-                # if n == label: continue
-                self.predictions[walker_id][-1].add((label, n))
+            self.predictions[walker_id][-1][label] = community_cache[label]
 
         tm.mark(s="make_predictions")
 
@@ -1371,6 +1398,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 has_accurate_predictions_count = 0
                 has_too_many_accurate_predictions_count = 0
                 adjacencies_inserted = 0
+                prediction_count = 0
                 nn_gte_10 = 0
                 nn_gte_20 = 0
 
@@ -1398,6 +1426,8 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                             has_too_many_accurate_predictions_count += 1
                     if "identical" in stats and stats["identical"]:
                         is_identical_count += 1
+                    if "prediction_count" in stats:
+                        prediction_count += stats["prediction_count"]
                     if "adjacencies_inserted" in stats:
                         adjacencies_inserted += stats["adjacencies_inserted"]
                     if "near_neighbors_count" in stats:
@@ -1421,6 +1451,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 if keep_times:
                     print(time_stats)
 
+                print("avg_prediction_count", int(math.floor(prediction_count/200)))
                 print(
                     "vid", video_file_count, 
                     "frame", t+1,
