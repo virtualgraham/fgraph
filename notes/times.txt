@@ -170,4 +170,61 @@ TIME write patches + compute stats 		777939
 
 
 
+{
+'insert_observation': 					15037000, 
+'knn_query': 							11434000, 
+'find_correct_predictions': 			283009000, 
+'insert_node_and_adjacencies': 			421432000, 
+'make_predictions': 					6247000, 
+'chain_predictions_into_set': 			177798000, 
+'build_accurate_predictions_set': 		101815000, 
+'add_predicted_observations': 			1916000, 
+'find_correct_predictions_inside': 		282344000
+}
+
+
+
+
+TIME read video frame 					2227453
+TIME resize_frame 						37680
+TIME key_point_grid 					731514063
+TIME walker_count x next_pos 			2195308
+TIME extract_windows 					1240140
+TIME preprocess_input + model.predict 	551371590
+TIME add_parrelell_observations 		6113419180
+TIME write patches + compute stats 		823840
+{
+'insert_observation': 					14478691, 
+'knn_query': 							10096906, 
+'find_correct_predictions': 			3865067799, 
+'insert_node_and_adjacencies': 			775059439, 
+'make_predictions': 					45286296, 
+'build_accurate_predictions_set': 		1313324031, 
+'add_predicted_observations': 			3867667, 
+'find_correct_predictions_inside': 		3864621198
+}
+
+
+
+TIME read video frame 					22010759
+TIME resize_frame 						37654
+TIME key_point_grid 					869583252
+TIME walker_count x next_pos 			3352724
+TIME extract_windows 					1233808
+TIME preprocess_input + model.predict 	869673898
+TIME add_parrelell_observations 		35147472556
+TIME write patches + compute stats 		1691711
+
+{'insert_observation': 					123487899, 
+'knn_query': 							28879571, 
+'find_correct_predictions': 			21605436412, 
+'insert_node_and_adjacencies':		 	1147280668, 
+'make_predictions': 					3860328, 
+'chain_predictions_into_set': 			76017, 
+'build_accurate_predictions_set': 		21131795908, 
+'add_predicted_observations': 			441496790, 
+'find_correct_predictions_inside': 		21604568069
+}
+avg_prediction_count 0
+
 

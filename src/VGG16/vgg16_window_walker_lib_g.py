@@ -763,11 +763,13 @@ class MemoryGraph:
 
     # TODO: should be parallelizable safe (networkx)
     def insert_adjacency(self, from_id, to_id):
+        if(from_id == to_id) return
         self.save_edges([(from_id, to_id)])
         cwg.add_edge(self.graph, from_id, to_id)
 
 
     def insert_adjacencies(self, edges):
+        edges = [e for e in edges if e[0] != e[1]]
         self.save_edges(edges)
         for e in edges:
             cwg.add_edge(self.graph, e[0], e[1])
