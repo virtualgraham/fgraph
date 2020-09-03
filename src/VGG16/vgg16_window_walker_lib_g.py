@@ -42,13 +42,15 @@ class MemoryGraphWalker:
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
         else:
-            labels = [None for i in range(len(feats))]
-            distances = [None for i in range(len(feats))]
+            labels = [[] for i in range(len(feats))]
+            distances = [[] for i in range(len(feats))]
 
         
+        # print(labels)
         # get all the labels less than threshold distance together in one list
         labels_merged = list(chain.from_iterable(labels))
         distances_merged = list(chain.from_iterable(distances))
+
         neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= self.distance_threshold]))
 
         # TODO each community probably contains its own node, so probably it should be removed
@@ -79,7 +81,7 @@ class MemoryGraphWalker:
 
         tm.mark(s="insert_observation")
 
-        if distances is not None and distances[0] <= self.distance_threshold: 
+        if len(distances) > 0 and distances[0] <= self.distance_threshold: 
             neighbor_nodes = set([l for l,d in zip(labels, distances) if d <= self.distance_threshold])
         else:
             neighbor_nodes = set()
@@ -87,7 +89,7 @@ class MemoryGraphWalker:
         stats["near_neighbors_count"] = len(neighbor_nodes)
         # print("near_neighbors_count", len(neighbor_nodes))
 
-        if distances is not None:
+        if len(distances) > 0:
             stats["nearest_neighbor"] = distances[0]
 
         tm.mark(l="find_correct_predictions", s="knn_query")
@@ -103,6 +105,8 @@ class MemoryGraphWalker:
 
             predictions = set(chain.from_iterable(self.predictions[walker_id]))
             
+
+            # print(predictions)
             # if len(labels_set) == 0:
             #     stats["nearest_neighbor"]
             #     print("No neighbors in threshold distance")
@@ -114,9 +118,11 @@ class MemoryGraphWalker:
             
             for pred in predictions:
                 if pred[1] in neighbor_nodes:
-                    add_predicted_observations.add(pred[1])
+                    add_predicted_observations.add(pred[1]) # the node that is similar to the current observation
                     if len(accurate_predictions) < self.accurate_prediction_limit:
-                        accurate_predictions.add(pred[0])
+                        accurate_predictions.add(pred[0]) # the node that is similar to the previous observation
+                    else:
+                        break
             
             ###################
             ###################
@@ -137,7 +143,7 @@ class MemoryGraphWalker:
         if len(accurate_predictions) < self.accurate_prediction_limit:
             
             #if d is not None and sum([i < self.identical_distance for i in d]) > 3:
-            if distances is not None and (distances[0] < self.identical_distance):
+            if len(distances) > 0 and (distances[0] < self.identical_distance):
                 node_id = labels[0]
                 stats["identical"] = True
                 #print("Using Identical")
