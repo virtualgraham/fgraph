@@ -39,22 +39,31 @@ class MemoryGraphWalker:
 
 
     def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects, keep_times=False):
-        community_cache = dict()
-
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
         else:
             labels = [None for i in range(len(feats))]
             distances = [None for i in range(len(feats))]
 
+        
+        # get all the labels less than threshold distance together in one list
+        labels_merged = list(chain.from_iterable(labels))
+        distances_merged = list(chain.from_iterable(distances))
+        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= self.distance_threshold]))
+
+        # TODO each community probably contains its own node, so probably it should be removed
+        community_cache_list = self.memory_graph.get_communities(neighbor_nodes_merged, walk_trials=200, member_portion=20)
+
+        community_cache = dict([(neighbor_nodes_merged[i], community_cache_list[i]) for i in range(len(neighbor_nodes_merged))])
+
         return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache, keep_times) for i in range(len(feats))]
 
 
-    def add_observation(self, file, t, pos, adj, feats, patch, obj, walker_id, keep_times=False):
-        if self.memory_graph.index_count() >= self.knn:
-            labels, distances = self.memory_graph.knn_query([feats], k = self.knn)
+    # def add_observation(self, file, t, pos, adj, feats, patch, obj, walker_id, keep_times=False):
+    #     if self.memory_graph.index_count() >= self.knn:
+    #         labels, distances = self.memory_graph.knn_query([feats], k = self.knn)
 
-        return self._add_observation(file, t, pos, adj, feats, patch, obj, labels[0], distances[0], i, dict(), keep_times=keep_times)
+    #     return self._add_observation(file, t, pos, adj, feats, patch, obj, labels[0], distances[0], i, dict(), keep_times=keep_times)
         
 
     # TODO: should be parallelizable
@@ -88,8 +97,6 @@ class MemoryGraphWalker:
 
         # find correct predictions and reinforce with adjacency
 
-        
-
         if adj and walker_id in self.predictions and len(neighbor_nodes) > 0:
 
             tm.mark(l="find_correct_predictions_inside")
@@ -122,7 +129,6 @@ class MemoryGraphWalker:
                 stats["accurate_predictions"] = len(accurate_predictions)
                 # print("Predictions", len(accurate_predictions), "of", len(predictions))
         
-
             tm.mark(si="find_correct_predictions_inside")
 
         # print("frame", t, pos)
@@ -168,32 +174,31 @@ class MemoryGraphWalker:
 
         # if self.memory_graph.index_count() >= self.knn len(neighbor_nodes) > 0:
 
-        neighbor_nodes_list = list()
-        multi_next_adjacencies = list()
-        neighbor_nodes_list_not_cached = list()
+        # neighbor_nodes_list = list()
+        # multi_next_adjacencies = list()
+        # neighbor_nodes_list_not_cached = list()
 
-        for label in neighbor_nodes:
-            if label in community_cache:
-                # print("cached")
-                neighbor_nodes_list.append(label)
-                multi_next_adjacencies.append(community_cache[label])
-            else:
-                # print("not cached")
-                neighbor_nodes_list_not_cached.append(label)
+        # for label in neighbor_nodes:
+        #     if label in community_cache:
+        #         # print("cached")
+        #         neighbor_nodes_list.append(label)
+        #         multi_next_adjacencies.append(community_cache[label])
+        #     else:
+        #         # print("not cached")
+        #         neighbor_nodes_list_not_cached.append(label)
         
-        communties_not_cached = self.memory_graph.get_communities(neighbor_nodes_list_not_cached, walk_trials=200, member_portion=20)
+        # communties_not_cached = self.memory_graph.get_communities(neighbor_nodes_list_not_cached, walk_trials=200, member_portion=20)
 
-        for i in range(len(neighbor_nodes_list_not_cached)):
-            community_cache[neighbor_nodes_list_not_cached[i]] = communties_not_cached[i]
+        # for i in range(len(neighbor_nodes_list_not_cached)):
+        #     community_cache[neighbor_nodes_list_not_cached[i]] = communties_not_cached[i]
 
-        neighbor_nodes_list.extend(neighbor_nodes_list_not_cached)
-        multi_next_adjacencies.extend(communties_not_cached)
+        # neighbor_nodes_list.extend(neighbor_nodes_list_not_cached)
+        # multi_next_adjacencies.extend(communties_not_cached)
         
-        for i in range(len(neighbor_nodes)): #knn#
-            next_adjacencies = multi_next_adjacencies[i]
-            label = neighbor_nodes_list[i]
-
+        for label in neighbor_nodes: #knn#
+            next_adjacencies = community_cache[label]
             for n in next_adjacencies:
+                # if n == label: continue
                 self.predictions[walker_id][-1].add((label, n))
 
         tm.mark(s="make_predictions")
@@ -749,9 +754,7 @@ class MemoryGraph:
     
 
     def get_communities(self, node_ids, walk_length=10, walk_trials=1000, member_portion=200):
-        communities = cwg.communities(self.graph, node_ids, walk_length, walk_trials, member_portion)
-        print([len(c) for c in communities])
-        return communities
+        return cwg.communities(self.graph, node_ids, walk_length, walk_trials, member_portion)
 
 
     def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=200, save_to_db=True):
