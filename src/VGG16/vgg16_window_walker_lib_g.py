@@ -81,10 +81,14 @@ class MemoryGraphWalker:
 
         tm.mark(s="insert_observation")
 
+        
         if len(distances) > 0 and distances[0] <= self.distance_threshold: 
             neighbor_nodes = set([l for l,d in zip(labels, distances) if d <= self.distance_threshold])
         else:
             neighbor_nodes = set()
+
+        # print("len(distances)", len(distances))
+        # print("len(neighbor_nodes)", len(neighbor_nodes))
 
         stats["near_neighbors_count"] = len(neighbor_nodes)
         # print("near_neighbors_count", len(neighbor_nodes))
@@ -217,7 +221,9 @@ class MemoryGraphWalker:
         h = self.predictions[walker_id]
         h.append(dict())
         if len(h) > self.prediction_history_length:
-            h.pop()
+            h.pop(0)
+
+        
 
         # if self.memory_graph.index_count() >= self.knn len(neighbor_nodes) > 0:
 
@@ -244,6 +250,10 @@ class MemoryGraphWalker:
         
         for label in neighbor_nodes: #knn#
             self.predictions[walker_id][-1][label] = community_cache[label]
+
+        # for i in range(len(self.predictions[walker_id])):
+        #     print(len(self.predictions[walker_id][i]))
+        # print(len(self.predictions[walker_id]), len(neighbor_nodes), len(self.predictions[walker_id][-1]))
 
         tm.mark(s="make_predictions")
 
