@@ -134,15 +134,14 @@ class MemoryGraphWalker:
 
             tm.mark(l="build_accurate_predictions_set")
 
-            has_predictions = False
+            stats["predictions"] = 0
+            stats["prediction_members"] = 0
 
-            # stats["large_community_size"] = 0
-
-            for di in self.predictions[walker_id]:
-                if len(di) > 0: has_predictions = True
-                for k, v in di.items():
-                    if len(v) > 40: print(len(v))
-                    u = v.intersection(neighbor_nodes)
+            for di in self.predictions[walker_id]: # history size 4
+                stats["predictions"] += len(di)
+                for k, v in di.items(): # knn 30
+                    stats["prediction_members"] += len(v)
+                    u = v.intersection(neighbor_nodes) # 40 and 30
                     if len(u) > 0:
                         add_predicted_observations.update(u) # the node that is similar to the current observation
                         if len(accurate_predictions) < self.accurate_prediction_limit:
@@ -169,10 +168,7 @@ class MemoryGraphWalker:
 
             tm.mark(si="add_predicted_observations")
 
-            if has_predictions:
-                stats["predictions"] = True
-                stats["accurate_predictions"] = len(accurate_predictions)
-                # print("Predictions", len(accurate_predictions), "of", len(predictions))
+            stats["accurate_predictions"] = len(accurate_predictions)
         
             tm.mark(si="find_correct_predictions_inside")
 
@@ -1399,6 +1395,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 has_too_many_accurate_predictions_count = 0
                 adjacencies_inserted = 0
                 prediction_count = 0
+                prediction_members_count = 0
                 nn_gte_10 = 0
                 nn_gte_20 = 0
 
@@ -1419,6 +1416,9 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                         near_neighbor_count += 1
                     if "predictions" in stats:
                         has_predictions_count += 1
+                        prediction_count += stats["predictions"]
+                    if "prediction_members" in stats:
+                        prediction_members_count += stats["prediction_members"]
                     if "accurate_predictions" in stats:
                         if stats["accurate_predictions"] > 0:
                             has_accurate_predictions_count += 1
@@ -1426,8 +1426,6 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                             has_too_many_accurate_predictions_count += 1
                     if "identical" in stats and stats["identical"]:
                         is_identical_count += 1
-                    if "prediction_count" in stats:
-                        prediction_count += stats["prediction_count"]
                     if "adjacencies_inserted" in stats:
                         adjacencies_inserted += stats["adjacencies_inserted"]
                     if "near_neighbors_count" in stats:
@@ -1451,7 +1449,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 if keep_times:
                     print(time_stats)
 
-                print("avg_prediction_count", int(math.floor(prediction_count/200)))
+                print("avg_prediction_count", int(math.floor(prediction_count/200)), int(math.floor(prediction_members_count/200)))
                 print(
                     "vid", video_file_count, 
                     "frame", t+1,
