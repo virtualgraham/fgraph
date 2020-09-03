@@ -103,8 +103,11 @@ class MemoryGraphWalker:
 
             tm.mark(l="find_correct_predictions_inside")
 
+            tm.mark(l="chain_predictions_into_set")
+            ######### This is very expensive operation ##########
             predictions = set(chain.from_iterable(self.predictions[walker_id]))
-            
+            #########
+            tm.mark(si="chain_predictions_into_set")
 
             # print(predictions)
             # if len(labels_set) == 0:

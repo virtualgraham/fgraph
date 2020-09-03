@@ -1,0 +1,173 @@
+420000, 'add_predicted_observations': 11078000, 'after_add_predicted_observations': 975000, 'find_correct_predictions_inside': 3066700000}
+vid 1 frame 10 start 10 nn0 94 nn100 0 nn200 0 iden 2 pred 86 accu 50 many 7 adj 310
+
+
+
+
+
+TIME read video frame 					3613000
+TIME resize_frame 						34000
+TIME key_point_grid 					540607000
+TIME walker_count x next_pos 			2845000
+TIME extract_windows 					1271000
+TIME preprocess_input + model.predict 	431233000
+observations with objects 				54
+TIME add_parrelell_observations 		5582025000
+TIME write patches + compute stats		970000
+
+
+{'insert_observation': 					13186000, 
+'knn_query': 							54955000, 
+	'before_distance': 						103711000, 
+	'distance_not_found':	 				128154000, 
+	'add_evaluated_ids': 					105602000, 
+	'distance_found': 						  3630000, 
+	'add_predicted_observations': 			 12945000, 
+	'after_add_predicted_observations': 	  1034000, 
+	'find_correct_predictions_inside': 	   3340382000,
+											713042000 
+'find_correct_predictions': 			3340953000, 
+'insert_node_and_adjacencies': 			452587000, 
+'make_predictions': 					1596673000
+}
+
+
+
+
+
+
+
+
+TIME read video frame 					2379115
+TIME resize_frame 						38920
+TIME key_point_grid 					613861064
+TIME walker_count x next_pos 			1902428
+TIME extract_windows 					1140662
+TIME preprocess_input + model.predict 	548735323
+TIME add_parrelell_observations 		2292761214
+
+TIME write patches + compute stats 		759003
+										
+{
+'insert_observation': 					8797392, 
+'knn_query':							9669877, 
+'find_correct_predictions_inside': 		38904285, 
+'find_correct_predictions': 			39394970, 
+'insert_node_and_adjacencies': 			188900708, 
+'make_predictions': 					2009873980
+						
+}
+
+
+TIME read video frame 					2061468
+TIME resize_frame 						31850
+TIME key_point_grid 					742008233
+TIME walker_count x next_pos 			1899854
+TIME extract_windows 					1303741
+TIME preprocess_input + model.predict 	550786729
+TIME add_parrelell_observations 		 3252092626
+										13071830460 = 4x
+TIME write patches + compute stats 		720129
+{'insert_observation': 					12387872, 
+'knn_query': 							8854244, 
+'find_correct_predictions_inside': 		
+										7532468657  
+										
+'find_correct_predictions': 			476647995,
+										7533720015
+										
+ 'insert_node_and_adjacencies': 		528377681, 
+ 										727236284
+ 										
+ 'make_predictions': 					2107544993
+ 										4326278180 = x2
+ }
+ 
+ 
+ 
+
+
+TIME read video frame 					3480036
+TIME resize_frame 						32241
+TIME key_point_grid 					759463767
+TIME walker_count x next_pos 			2054759
+TIME extract_windows					1286261
+TIME preprocess_input + model.predict 	551911214
+TIME add_parrelell_observations 		13071830460
+TIME write patches + compute stats 		894628
+
+{'insert_observation': 					20494501, 
+'knn_query': 							13183254, 
+'find_correct_predictions': 			7 533 720 015, 
+'insert_node_and_adjacencies': 			  727 236 284, 
+'make_predictions': 					4 326 278 180, 
+'find_correct_predictions_inside': 		7532468657
+}
+
+
+
+
+TIME read video frame 					3749784
+TIME resize_frame 						37667
+TIME key_point_grid 					731065912
+TIME walker_count x next_pos 			1908751
+TIME extract_windows 					1188815
+TIME preprocess_input + model.predict 	549230291
+TIME add_parrelell_observations 		2097043046
+TIME write patches + compute stats 		698680
+{'insert_observation': 					10068669, 
+'knn_query': 							7502995, 
+'find_correct_predictions': 			892 672 447, 
+'insert_node_and_adjacencies': 			588 583 373, 
+'make_predictions': 					 10 852 539, 
+'find_correct_predictions_inside': 		892126076
+}
+
+
+TIME read video frame 					4459000
+TIME resize_frame 						38000
+TIME key_point_grid 					537945000
+TIME walker_count x next_pos 			2954000
+TIME extract_windows 					1622000
+TIME preprocess_input + model.predict 	532936000
+TIME add_parrelell_observations 		804459000
+TIME write patches + compute stats 		893000
+{
+'insert_observation': 					31969000, 
+'knn_query': 							12330000, 
+'find_correct_predictions':				59337000, 
+'insert_node_and_adjacencies': 			251460000, 
+'make_predictions': 					9603000, 
+'build_accurate_predictions_set': 		16603000, 
+'add_predicted_observations':			2307000, 
+'find_correct_predictions_inside': 		58786000
+}
+
+
+
+
+
+
+TIME read video frame 					2134966
+TIME resize_frame 						37489
+TIME key_point_grid 					747139679
+TIME walker_count x next_pos 			2145398
+TIME extract_windows 					1266740
+TIME preprocess_input + model.predict 	548656580
+TIME add_parrelell_observations 		2430079538
+TIME write patches + compute stats 		777939
+{
+'insert_observation': 					10257004, 
+'knn_query': 							7049109, 
+'find_correct_predictions': 			1013499613, 
+'insert_node_and_adjacencies':	 		 667846866,
+'make_predictions': 					17563477, 
+'build_accurate_predictions_set': 		 332641651, 
+'add_predicted_observations': 			   1206117, 
+'find_correct_predictions_inside': 		1013106058
+ }
+
+
+
+
+
