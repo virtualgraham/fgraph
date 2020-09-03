@@ -22,5 +22,5 @@ cwg.add_edge(graph, 18, 19)
 cwg.add_edge(graph, 19, 20)
 cwg.add_edge(graph, 20, 1)
 
-communities_result = cwg.communities(graph, [1,2,3,4,5, 11,12,13,14,15], 7, 1000, 900)
+communities_result = cwg.communities(graph, [1,2,3,4,5, 11,12,13,14,15], 7, 100, 50)
 print(communities_result)

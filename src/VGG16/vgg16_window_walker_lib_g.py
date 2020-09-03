@@ -115,7 +115,8 @@ class MemoryGraphWalker:
    
             ###################
             ###################
-            
+            tm.mark(l="build_accurate_predictions_set")
+
             for pred in predictions:
                 if pred[1] in neighbor_nodes:
                     add_predicted_observations.add(pred[1]) # the node that is similar to the current observation
@@ -124,11 +125,16 @@ class MemoryGraphWalker:
                     else:
                         break
             
+            tm.mark(si="build_accurate_predictions_set")
             ###################
             ###################
 
+            tm.mark(l="add_predicted_observations")
+
             if len(add_predicted_observations) > 0:
                 self.memory_graph.add_predicted_observations(add_predicted_observations, [observation_id]*len(add_predicted_observations))
+
+            tm.mark(si="add_predicted_observations")
 
             if len(predictions) > 0:
                 stats["predictions"] = len(predictions)
@@ -155,15 +161,21 @@ class MemoryGraphWalker:
             self.memory_graph.add_integrated_observations([node_id], [observation_id])
     
             stats["adjacencies_inserted"] = 0
+
             if adj:
+                insert_adjacencies = []
+
                 if walker_id in self.last_ids and self.last_ids[walker_id] is not None :
                     stats["adjacencies_inserted"] += 1
-                    self.memory_graph.insert_adjacency(self.last_ids[walker_id], node_id)
+                    insert_adjacencies.append((self.last_ids[walker_id], node_id))
+                    #self.memory_graph.insert_adjacency(self.last_ids[walker_id], node_id)
 
                 for a in accurate_predictions:
                     stats["adjacencies_inserted"] += 1
-                    self.memory_graph.insert_adjacency(a, node_id)
-            
+                    insert_adjacencies.append((a, node_id))
+                    #self.memory_graph.insert_adjacency(a, node_id)
+
+                self.memory_graph.insert_adjacencies(insert_adjacencies)
         else:
             node_id = None
 
@@ -446,8 +458,8 @@ class MemoryGraph:
     # TODO: should be parallelizable safe (plyvel)
     def save_edges(self, edges):
         wb = self.db.write_batch()
-        for from_node_id, to_node_id in edges:
-            wb.put(MemoryGraph.edge_key((from_node_id, to_node_id)), b'')
+        for edge in edges:
+            wb.put(MemoryGraph.edge_key(edge), b'')
         wb.write()
 
 
@@ -718,6 +730,11 @@ class MemoryGraph:
         self.save_edges([(from_id, to_id)])
         cwg.add_edge(self.graph, from_id, to_id)
 
+
+    def insert_adjacencies(self, edges):
+        self.save_edges(edges)
+        for e in edges:
+            cwg.add_edge(self.graph, e[0], e[1])
 
     # TODO: should be parallelizable safe (hnswlib)
     def knn_query(self, feats, k=1):
