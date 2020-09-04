@@ -864,7 +864,7 @@ class MemoryGraph:
     def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=200):
         
         if len(features) == 0:
-            return results
+            return set()
 
         lab, dis = self.knn_query(features, k=k)
         features_max = np.max(features, axis=0)
