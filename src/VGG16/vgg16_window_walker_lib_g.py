@@ -763,7 +763,7 @@ class MemoryGraph:
 
     # TODO: should be parallelizable safe (networkx)
     def insert_adjacency(self, from_id, to_id):
-        if(from_id == to_id) return
+        if(from_id == to_id): return
         self.save_edges([(from_id, to_id)])
         cwg.add_edge(self.graph, from_id, to_id)
 
@@ -863,51 +863,69 @@ class MemoryGraph:
     # candidate communities are ones that contain any member that is near any member of the quey community
     def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=200):
         
-        results = set()
-
         if len(features) == 0:
             return results
 
         lab, dis = self.knn_query(features, k=k)
         features_max = np.max(features, axis=0)
         
-        visited_nodes = set()
+        labels_merged = list(chain.from_iterable(lab))
+        distances_merged = list(chain.from_iterable(dis))
 
-        # degrees = []
+        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
 
-        for j in range(len(features)):
-            labels = lab[j]
-            distances = dis[j]
+        community_cache_list = self.get_communities(neighbor_nodes_merged, walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)
 
-            len_results = len(results)
+        results = set()
 
-            for i in range(k):
-                if distances[i] > feature_dis:
-                    # break because distance are sorted and only increase from here
-                    break
-                label = labels[i]
-                
-                if label in visited_nodes:
-                    # print("label in visited_nodes")
-                    continue
-                visited_nodes.add(label)
-
-                community = self.get_community(label, walk_length, walk_trials, member_portion)
-                # print("len(community)", len(community))
-                if len(community) == 0:
-                    continue
-                community_features = np.array([self.get_node(c)["f"] for c in community])
-                community_features_max = np.max(community_features, axis=0)
-                d = self.distance(community_features_max, features_max)
-                # print("distance", d)
-                if d <= community_dis:
-                    results.add(frozenset(community))
-
-            # print("found", len(results) - len_results, "communities")
-
-        # print(Counter(degrees))
+        for community in community_cache_list:
+            if len(community) == 0:
+                continue
+            community_features = np.array([self.get_node(c)["f"] for c in community])
+            community_features_max = np.max(community_features, axis=0)
+            d = self.distance(community_features_max, features_max)
+            if d <= community_dis:
+                results.add(frozenset(community))
 
         return results
+
+        visited_nodes = set()
+
+        # # degrees = []
+
+        # for j in range(len(features)):
+        #     labels = lab[j]
+        #     distances = dis[j]
+
+        #     len_results = len(results)
+
+        #     for i in range(k):
+        #         if distances[i] > feature_dis:
+        #             # break because distance are sorted and only increase from here
+        #             break
+        #         label = labels[i]
+                
+        #         if label in visited_nodes:
+        #             # print("label in visited_nodes")
+        #             continue
+        #         visited_nodes.add(label)
+
+        #         community = self.get_community(label, walk_length, walk_trials, member_portion)
+        #         # print("len(community)", len(community))
+        #         if len(community) == 0:
+        #             continue
+        #         community_features = np.array([self.get_node(c)["f"] for c in community])
+        #         community_features_max = np.max(community_features, axis=0)
+        #         d = self.distance(community_features_max, features_max)
+        #         # print("distance", d)
+        #         if d <= community_dis:
+        #             results.add(frozenset(community))
+
+        #     # print("found", len(results) - len_results, "communities")
+
+        # # print(Counter(degrees))
+
+        # return results
 
 
     def distance(self, a, b):

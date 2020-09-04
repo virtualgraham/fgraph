@@ -9,13 +9,13 @@ from datetime import datetime
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-from vgg16_window_walker_lib_d import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, paint_windows, MemoryGraph, extract_window_pixels
+from vgg16_window_walker_lib_g import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, paint_windows, MemoryGraph, extract_window_pixels
 
 from itertools import chain
 
 mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
-db_path = "../../data/table_objects_e.db"
+db_path = "../../data/table_objects_g.db"
 max_frames = 30*30
 walker_count = 3
 window_size = 32
@@ -157,7 +157,7 @@ def search_file(file, memory_graph, cnn, orb):
 
                 ########
                 
-                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.3, community_dis=0.3, k=100, walk_length=10, walk_trials=1000, member_portion=200)
+                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.2, community_dis=0.2, k=100, walk_length=10, walk_trials=1000, member_portion=200)
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
                 
