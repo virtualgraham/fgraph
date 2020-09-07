@@ -193,6 +193,23 @@ Given a set of videos each which contain a random subset of objects, locate each
 
 
 
+# Using History and Cluster Likelihood
+
+With history length h maybe around 7
+
+For each observation in history
+    For each nearest neighbor find community 
+        add community to the set of communities
+
+
+For each community
+    For each history
+        Does Community share nodes with nearest neighbors of history?
+
+Sort communities by most unique history with near nodes and how close those similarities are
+
+
+
 video_objects ['apple', 'bear', 'carrot', 'chain', 'clippers', 'cup', 'notebook', 'opener']
 
 counts 
@@ -479,3 +496,62 @@ pixel_true_positive 0.09801816489632051 4492479 45833127
 pixel_false_negative 0.9019818351036795
 pixel_false_positive 0.0009494616436716548 4718363 4969514073
 pixel_true_negative 0.9990505383563284
+
+
+
+
+2020-09-07 11:41:07.068343
+apple
+len(observations) 366
+
+observations_of_sample_class 0.9754098360655737
+observations_not_of_sample_class 0.024590163934426257
+
+observations_true_positive 0.23564356435643563 357 1515
+observations_false_negative 0.7643564356435644
+observations_false_positive 0.00010080080640645126 9 89285
+observations_true_negative 0.9998991991935936
+
+video_true_positive 1.0 1 1
+video_false_negative 0.0
+video_false_positive None 0 0
+video_true_negative None
+
+frame_true_positive 0.4976190476190476 209 420
+frame_false_negative 0.5023809523809524
+frame_false_positive 0.11764705882352941 4 34
+frame_true_negative 0.8823529411764706
+
+pixel_true_positive 0.03589476069010119 348719 9715039
+pixel_false_negative 0.9641052393098988
+pixel_false_positive 2.255002400209776e-05 9216 408691361
+pixel_true_negative 0.9999774499759979
+
+
+2020-09-07 11:47:02.216136
+apple
+len(observations) 540
+
+observations_of_sample_class 0.9851851851851852
+observations_not_of_sample_class 0.014814814814814836
+
+observations_true_positive 0.36264485344239944 532 1467
+observations_false_negative 0.6373551465576006
+observations_false_positive 8.955257295736178e-05 8 89333
+observations_true_negative 0.9999104474270426
+
+video_true_positive 1.0 1 1
+video_false_negative 0.0
+video_false_positive None 0 0
+video_true_negative None
+
+frame_true_positive 0.5952380952380952 250 420
+frame_false_negative 0.40476190476190477
+frame_false_positive 0.029411764705882353 1 34
+frame_true_negative 0.9705882352941176
+
+pixel_true_positive 0.052609258696748415 511101 9715039
+pixel_false_negative 0.9473907413032516
+pixel_false_positive 1.9129349788237877e-05 7818 408691361
+pixel_true_negative 0.9999808706502118
+

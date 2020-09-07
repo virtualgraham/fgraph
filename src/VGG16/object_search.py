@@ -9,14 +9,14 @@ from datetime import datetime
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-from vgg16_window_walker_lib_g import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, paint_windows, MemoryGraph, extract_window_pixels
+from vgg16_window_walker_lib_h import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, paint_windows, MemoryGraph, extract_window_pixels
 
 from itertools import chain
 
 mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
-db_path = "../../data/table_objects_g.db"
-max_frames = 30*30
+db_path = "../../data/table_objects_h.db"
+max_frames = 21
 walker_count = 3
 window_size = 32
 stride = 16
@@ -68,8 +68,8 @@ def first_pos(kp_grid):
 
 
 def next_pos(kp_grid, shape, g_pos, walk_t, walk_length, stride):
- 
-    if (g_pos is not None) and walk_t < walk_length:
+    
+    if (g_pos is not None) and walk_t < (walk_length-1):
 
         for rad in range(1, 3):
             rad_grid = get_rad_grid(g_pos, rad, shape, stride)
@@ -113,6 +113,8 @@ def search_file(file, memory_graph, cnn, orb):
 
     observation_ids = set()
 
+    done = False
+
     for t in range(max_frames):
         if t % 7 == 0:
             print("frame", t)
@@ -143,21 +145,21 @@ def search_file(file, memory_graph, cnn, orb):
             preprocess_input(windows)
             feats = cnn.predict(windows)
             feats = feats.reshape((windows.shape[0], 512))
+        
+        if mask_ret == False or video_ret == False:
+            done = True
+        else:
+            for i in range(walker_count):
+                cluster_feats[i].append(feats[i])
+                cluster_positions[i].append(pos[i])
+                cluster_patches[i].append(patches[i])
 
         for i in range(walker_count):
-            if not adj[i]:
-
-                # preview_frame = np.zeros((video_shape[0], video_shape[1], 3), np.uint8)
-                # paint_windows(cluster_positions[i], cluster_patches[i], preview_frame, window_size)
-                # # Display the resulting frame 
-                # cv2.imshow('preview', preview_frame) 
-                # key = cv2.waitKey(0)
-                # if key == 27: # exit on ESC
-                #     break
+            if (not adj[i] or done) and len(cluster_feats[i]) > 0:
 
                 ########
                 
-                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.2, community_dis=0.2, k=100, walk_length=10, walk_trials=1000, member_portion=200)
+                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=200)
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
                 
@@ -166,14 +168,11 @@ def search_file(file, memory_graph, cnn, orb):
                 cluster_feats[i] = []
                 cluster_positions[i] = []
                 cluster_patches[i] = []
-
-        if mask_ret == False or video_ret == False:
+        
+        if done:
             break
-        else:
-            for i in range(walker_count):
-                cluster_feats[i].append(feats[i])
-                cluster_positions[i].append(pos[i])
-                cluster_patches[i].append(patches[i])
+
+
 
     observations = memory_graph.get_observations(observation_ids)
 
@@ -253,96 +252,96 @@ def search_file(file, memory_graph, cnn, orb):
         observations_of_sample_class = None
         observations_not_of_sample_class = None
     
-    print("observations_of_sample_class", observations_of_sample_class)
+    print("observations_of_sample_class", observations_of_sample_class, labeled_observations, len(observations))
     print("observations_not_of_sample_class", observations_not_of_sample_class)
     
     print("")
 
-    if counts["observation_objects"][object_name] > 0:
+    if object_name in counts["observation_objects"] and counts["observation_objects"][object_name] > 0:
         observations_true_positive = labeled_observations / counts["observation_objects"][object_name]
         observations_false_negative = 1 - observations_true_positive
     else:
         observations_true_positive = None
         observations_false_negative = None
 
-    print("observations_true_positive", observations_true_positive, labeled_observations, counts["observation_objects"][object_name])
+    print("observations_true_positive", observations_true_positive, labeled_observations, counts["observation_objects"][object_name] if object_name in counts["observation_objects"] else None)
     print("observations_false_negative", observations_false_negative)
 
-    if (counts["observation_count"] - counts["observation_objects"][object_name]) > 0:
+    if object_name in counts["observation_objects"] and (counts["observation_count"] - counts["observation_objects"][object_name]) > 0:
         observations_false_positive = mislabeled_observations / (counts["observation_count"] - counts["observation_objects"][object_name])
         observations_true_negative = 1 - observations_false_positive
     else:
         observations_false_positive = None
         observations_true_negative = None
 
-    print("observations_false_positive", observations_false_positive, mislabeled_observations, (counts["observation_count"] - counts["observation_objects"][object_name]))
+    print("observations_false_positive", observations_false_positive, mislabeled_observations, (counts["observation_count"] - counts["observation_objects"][object_name]) if object_name in counts["observation_objects"] else None)
     print("observations_true_negative", observations_true_negative)
    
     print("")
 
-    if counts["video_objects"][object_name] > 0:
+    if object_name in counts["video_objects"] and counts["video_objects"][object_name] > 0:
         video_true_positive = len(labeled_video_files) / counts["video_objects"][object_name]
         video_false_negative = 1 - video_true_positive
     else:
         video_true_positive = None
         video_false_negative = None
 
-    print("video_true_positive", video_true_positive, len(labeled_video_files), counts["video_objects"][object_name])
+    print("video_true_positive", video_true_positive, len(labeled_video_files), counts["video_objects"][object_name] if object_name in counts["video_objects"] else None)
     print("video_false_negative", video_false_negative)
     
-    if (counts["video_count"] - counts["video_objects"][object_name]) > 0:
+    if object_name in counts["video_objects"] and (counts["video_count"] - counts["video_objects"][object_name]) > 0:
         video_false_positive = len(mislabeled_video_files) / (counts["video_count"] - counts["video_objects"][object_name])
         video_true_negative = 1 - video_false_positive
     else:
         video_false_positive = None
         video_true_negative = None
 
-    print("video_false_positive", video_false_positive, len(mislabeled_video_files), (counts["video_count"] - counts["video_objects"][object_name]))
+    print("video_false_positive", video_false_positive, len(mislabeled_video_files), (counts["video_count"] - counts["video_objects"][object_name]) if object_name in counts["video_objects"] else None)
     print("video_true_negative", video_true_negative)
     
     print("")
 
-    if counts["frame_objects"][object_name] > 0:
+    if object_name in counts["frame_objects"] and counts["frame_objects"][object_name] > 0:
         frame_true_positive = labeled_frames / counts["frame_objects"][object_name]
         frame_false_negative = 1 - frame_true_positive
     else:
         frame_true_positive = None
         frame_false_negative = None
 
-    print("frame_true_positive", frame_true_positive, labeled_frames, counts["frame_objects"][object_name])
+    print("frame_true_positive", frame_true_positive, labeled_frames, counts["frame_objects"][object_name] if object_name in counts["frame_objects"] else None)
     print("frame_false_negative", frame_false_negative)
     
-    if (counts["frame_count"] - counts["frame_objects"][object_name]) > 0:
+    if object_name in counts["frame_objects"] and (counts["frame_count"] - counts["frame_objects"][object_name]) > 0:
         frame_false_positive = mislabeled_frames / (counts["frame_count"] - counts["frame_objects"][object_name])
         frame_true_negative = 1 - frame_false_positive
     else:
         frame_false_positive = None
         frame_true_negative = None
 
-    print("frame_false_positive", frame_false_positive, mislabeled_frames, (counts["frame_count"] - counts["frame_objects"][object_name]))
+    print("frame_false_positive", frame_false_positive, mislabeled_frames, (counts["frame_count"] - counts["frame_objects"][object_name]) if object_name in counts["frame_objects"] else None)
     print("frame_true_negative", frame_true_negative)
     
     print("")
 
-    if counts["pixel_objects"][object_name] > 0:
+    if object_name in counts["pixel_objects"] and counts["pixel_objects"][object_name] > 0:
         pixel_true_positive = labeled_pixels / counts["pixel_objects"][object_name]
         pixel_false_negative = 1 - pixel_true_positive
     else:
         pixel_true_positive = None
         pixel_false_negative = None
 
-    print("pixel_true_positive", pixel_true_positive, labeled_pixels, counts["pixel_objects"][object_name])
+    print("pixel_true_positive", pixel_true_positive, labeled_pixels, counts["pixel_objects"][object_name] if object_name in counts["pixel_objects"] else None)
     print("pixel_false_negative", pixel_false_negative)
     
 
-    if (counts["pixel_count"] - counts["pixel_objects"][object_name]) > 0:
+    if object_name in counts["pixel_objects"] and (counts["pixel_count"] - counts["pixel_objects"][object_name]) > 0:
         pixel_false_positive = mislabeled_pixels / (counts["pixel_count"] - counts["pixel_objects"][object_name])
         pixel_true_negative = 1 - pixel_false_positive
     else:
         pixel_false_positive = None
         pixel_true_negative = None
 
-    print("pixel_false_positive", pixel_false_positive, mislabeled_pixels, (counts["pixel_count"] - counts["pixel_objects"][object_name]))
+    print("pixel_false_positive", pixel_false_positive, mislabeled_pixels, (counts["pixel_count"] - counts["pixel_objects"][object_name]) if object_name in counts["pixel_objects"] else None)
     print("pixel_true_negative", pixel_true_negative)
     
     print("")
