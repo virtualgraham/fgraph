@@ -16,14 +16,14 @@ from itertools import chain
 mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
 db_path = "../../data/table_objects_h.db"
-max_frames = 21
+max_frames = 30
 walker_count = 3
 window_size = 32
 stride = 16
 center_size = 16
 center_threshold = center_size*center_size*0.9
 grid_margin = 16
-walk_length = 7
+walk_length = 10
 max_elements=1200000
 
 def key_point_grid(orb, frame, obj_frame, stride):
@@ -116,7 +116,7 @@ def search_file(file, memory_graph, cnn, orb):
     done = False
 
     for t in range(max_frames):
-        if t % 7 == 0:
+        if t % walk_length == 0:
             print("frame", t)
 
         mask_ret, mask_frame = mask.read()
@@ -159,7 +159,7 @@ def search_file(file, memory_graph, cnn, orb):
 
                 ########
                 
-                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=200)
+                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.15, community_dis=0.15, k=30)
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
                 

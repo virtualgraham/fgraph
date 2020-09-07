@@ -787,8 +787,8 @@ class MemoryGraph:
 
     # the goal here is to search through the set of all communities and find all the ones that have a 
     # max_pool distance within a range of the max_pool distance of the query community
-    # candidate communities are ones that contain any member that is near any member of the quey community
-    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length=10, walk_trials=1000, member_portion=200):
+    # candidate communities are ones that contain any member that is near any member of the query community
+    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length_short=10, walk_length_long=1000, member_portion_short=200, member_portion_long=500, walk_trials=1000):
         
         if len(features) == 0:
             return set()
@@ -801,58 +801,23 @@ class MemoryGraph:
 
         neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
 
-        community_cache_list = self.get_communities(neighbor_nodes_merged, walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)
-
+        community_cache_list_a = self.get_communities(neighbor_nodes_merged, walk_length=walk_length_short, walk_trials=walk_trials, member_portion=member_portion_short)
+        community_cache_list_b = self.get_communities(neighbor_nodes_merged, walk_length=walk_length_long, walk_trials=walk_trials, member_portion=member_portion_long)
+        
         results = set()
 
-        for community in community_cache_list:
-            if len(community) == 0:
+        for i in range(len(neighbor_nodes_merged)):
+            community_a = community_cache_list_a[i]
+            community_b = community_cache_list_b[i]
+            if len(community_a) == 0:
                 continue
-            community_features = np.array([self.get_node(c)["f"] for c in community])
+            community_features = np.array([self.get_node(c)["f"] for c in community_a])
             community_features_max = np.max(community_features, axis=0)
             d = self.distance(community_features_max, features_max)
             if d <= community_dis:
-                results.add(frozenset(community))
+                results.add(frozenset(community_b))
 
         return results
-
-        visited_nodes = set()
-
-        # # degrees = []
-
-        # for j in range(len(features)):
-        #     labels = lab[j]
-        #     distances = dis[j]
-
-        #     len_results = len(results)
-
-        #     for i in range(k):
-        #         if distances[i] > feature_dis:
-        #             # break because distance are sorted and only increase from here
-        #             break
-        #         label = labels[i]
-                
-        #         if label in visited_nodes:
-        #             # print("label in visited_nodes")
-        #             continue
-        #         visited_nodes.add(label)
-
-        #         community = self.get_community(label, walk_length, walk_trials, member_portion)
-        #         # print("len(community)", len(community))
-        #         if len(community) == 0:
-        #             continue
-        #         community_features = np.array([self.get_node(c)["f"] for c in community])
-        #         community_features_max = np.max(community_features, axis=0)
-        #         d = self.distance(community_features_max, features_max)
-        #         # print("distance", d)
-        #         if d <= community_dis:
-        #             results.add(frozenset(community))
-
-        #     # print("found", len(results) - len_results, "communities")
-
-        # # print(Counter(degrees))
-
-        # return results
 
 
     def distance(self, a, b):
