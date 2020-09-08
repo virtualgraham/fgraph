@@ -24,8 +24,8 @@ cwg.add_edge(graph, 19, 20)
 cwg.add_edge(graph, 20, 1)
 
 # Query 5 nodes from each side of the ring
-communities_result = cwg.communities(graph, [1,2,3,4,5, 11,12,13,14,15], (2**4)-1, 1000, 500)
+communities_result = cwg.communities(graph, [1,2,3,4,5, 11,12,13,14,15], 2, 1000, 0)
 print("communities", communities_result)
 
-communities_result = cwg.communities_range(graph, [1,2,3,4,5, 11,12,13,14,15], 4, 4, 1000, 500)
+communities_result = cwg.communities_range(graph, [1,2,3,4,5, 11,12,13,14,15], 0, 1, 1000, 0)
 print("communities_range", communities_result)

@@ -10,6 +10,7 @@ from pathlib import Path
 import threading
 import re 
 from itertools import chain
+from collections import Counter
 
 import numpy as np
 import cv2
@@ -744,6 +745,8 @@ class MemoryGraph:
     def get_communities(self, node_ids, walk_length=10, walk_trials=1000, member_portion=200):
         return cwg.communities(self.graph, node_ids, walk_length, walk_trials, member_portion)
 
+    def get_communities_range(self, node_ids, log2_min_len=3, log2_max_len=12, walk_trials=1000, member_portion=200):
+        return cwg.communities_range(self.graph, node_ids, log2_min_len, log2_max_len, walk_trials, member_portion)
 
     def get_community(self, node_id, walk_length=10, walk_trials=1000, member_portion=200, save_to_db=True):
         
@@ -783,11 +786,11 @@ class MemoryGraph:
         return observation_ids
 
 
-    from collections import Counter
 
 
 
-    def search_group(self, features, feature_dis=0.4, community_dis=0.25, k=30, member_portion=200, walk_trials=1000):
+
+    def search_group(self, features, feature_dis=0.4, community_dis=0.2, k=30, initial_walk_length=8, member_portion=100, walk_trials=1000):
         
         if len(features) == 0:
             return set()
@@ -802,18 +805,24 @@ class MemoryGraph:
 
         results = set()
 
+        communities = self.get_communities(neighbor_nodes_merged, walk_length=initial_walk_length, walk_trials=walk_trials, member_portion=member_portion)
+
         for i in range(len(neighbor_nodes_merged)):
-            walk_length = 32
+            walk_length = initial_walk_length
             last_community = []
             while True:
-                community = self.get_communities([neighbor_nodes_merged[i]], walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)[0]
+                if walk_length == initial_walk_length:
+                    community = communities[i]
+                else:
+                    community = self.get_communities([neighbor_nodes_merged[i]], walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)[0]
+
                 if last_community == community:
                     results.add(frozenset(last_community))
                     break
                 community_features = np.array([self.get_node(c)["f"] for c in community])
                 community_features_max = np.max(community_features, axis=0)
                 d = self.distance(community_features_max, features_max)
-                print(walk_length, d, len(community))
+                # print(walk_length, d, len(community))
                 
                 if d > community_dis:
                     results.add(frozenset(last_community))
@@ -821,6 +830,48 @@ class MemoryGraph:
                 last_community = community
                 walk_length = walk_length * 2 # 8 16 32 64 128 256 
                 
+        return results
+
+
+    def search_group_c(self, features, feature_dis=0.30, community_dis=0.20, k=30, log2_min_len=3, log2_max_len=12, member_portion=200, walk_trials=1000):
+        
+        if len(features) == 0:
+            return set()
+
+        lab, dis = self.knn_query(features, k=k)
+        features_max = np.max(features, axis=0)
+        
+        labels_merged = list(chain.from_iterable(lab))
+        distances_merged = list(chain.from_iterable(dis))
+
+        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
+
+        results = set()
+
+
+        for i in range(len(neighbor_nodes_merged)):
+            
+            communities = self.get_communities_range([neighbor_nodes_merged[i]], log2_min_len=log2_min_len, log2_max_len=log2_max_len, walk_trials=walk_trials, member_portion=member_portion)[0]
+
+            last_community = []
+
+            for j in range(log2_max_len-log2_min_len+1):
+                community = communities[j]
+                if len(community) == 0:
+                    break
+                community_features = np.array([self.get_node(c)["f"] for c in community])
+                community_features_max = np.max(community_features, axis=0)
+                d = self.distance(community_features_max, features_max)
+                print(2**(log2_min_len + j), d, len(community))
+                
+                if d > community_dis:
+                    break
+
+                last_community = community
+
+            
+            results.add(frozenset(last_community))
+
         return results
 
 
