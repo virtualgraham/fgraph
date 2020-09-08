@@ -17,7 +17,7 @@ mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
 db_path = "../../data/table_objects_h.db"
 max_frames = 30
-walker_count = 3
+walker_count = 4
 window_size = 32
 stride = 16
 center_size = 16
@@ -159,7 +159,7 @@ def search_file(file, memory_graph, cnn, orb):
 
                 ########
                 
-                similar_clusters = memory_graph.search_group(cluster_feats[i], feature_dis=0.15, community_dis=0.15, k=30)
+                similar_clusters = memory_graph.search_group(cluster_feats[i], k=30)
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
                 

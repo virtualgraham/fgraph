@@ -788,7 +788,7 @@ class MemoryGraph:
     # the goal here is to search through the set of all communities and find all the ones that have a 
     # max_pool distance within a range of the max_pool distance of the query community
     # candidate communities are ones that contain any member that is near any member of the query community
-    def search_group(self, features, feature_dis=0.2, community_dis=0.2, k=30, walk_length_short=10, walk_length_long=1000, member_portion_short=200, member_portion_long=500, walk_trials=1000):
+    def search_group(self, features, feature_dis=0.12, community_dis=0.12, k=30, walk_length_short=10, walk_length_long=1000, member_portion_short=200, member_portion_long=500, walk_trials=1000):
         
         if len(features) == 0:
             return set()
@@ -819,6 +819,49 @@ class MemoryGraph:
 
         return results
 
+
+    def search_group_a(self, features, feature_dis=0.12, community_dis=0.12, k=30, walk_length=10, member_portion=100, iterations=10, walk_trials=1000):
+        
+        def iterative_group_search(node_ids):
+            unvisited = set(node_ids)
+            visited = set()
+
+            for i in range(iterations):
+                foo = set(chain.from_iterable(self.get_communities(list(unvisited), walk_length=10, walk_trials=walk_trials, member_portion=500)))
+                bar = foo - visited
+                visited = set(unvisited)
+                unvisited.update(bar)
+            
+            return unvisited.union(visited)
+
+
+        if len(features) == 0:
+            return set()
+
+        lab, dis = self.knn_query(features, k=k)
+        features_max = np.max(features, axis=0)
+        
+        labels_merged = list(chain.from_iterable(lab))
+        distances_merged = list(chain.from_iterable(dis))
+
+        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
+
+        community_cache_list = self.get_communities(neighbor_nodes_merged, walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)
+
+        results = set()
+
+        for i in range(len(neighbor_nodes_merged)):
+            community = community_cache_list[i]
+            if len(community) == 0:
+                continue
+            community_features = np.array([self.get_node(c)["f"] for c in community])
+            community_features_max = np.max(community_features, axis=0)
+            d = self.distance(community_features_max, features_max)
+            if d <= community_dis:
+                baz = iterative_group_search(community)
+                results.add(frozenset(baz))
+
+        return results
 
     def distance(self, a, b):
         if self.space == 'cosine':
@@ -1320,6 +1363,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 prediction_members_count = 0
                 nn_gte_10 = 0
                 nn_gte_20 = 0
+                nn_gte_30 = 0
 
                 time_stats = dict()
 
@@ -1355,6 +1399,8 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                             nn_gte_10 += 1
                         if stats["near_neighbors_count"] >= 20:
                             nn_gte_20 += 1
+                        if stats["near_neighbors_count"] >= 30:
+                            nn_gte_30 += 1
                     if keep_times:
                         for k, v in stats["time"].items():
                             if k not in time_stats:
@@ -1371,7 +1417,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 if keep_times:
                     print(time_stats)
 
-                print("avg_prediction_count", int(math.floor(prediction_count/200)), int(math.floor(prediction_members_count/200)))
+                # print("avg_prediction_count", int(math.floor(prediction_count/200)), int(math.floor(prediction_members_count/200)))
                 print(
                     "vid", video_file_count, 
                     "frame", t+1,
@@ -1379,8 +1425,9 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                     "nn00", near_neighbor_count,
                     "nn10", nn_gte_10,
                     "nn20", nn_gte_20,
+                    "nn30", nn_gte_30,
                     "iden", is_identical_count,
-                    "pred", has_predictions_count,
+                    # "pred", has_predictions_count,
                     "accu", has_accurate_predictions_count,
                     "many", has_too_many_accurate_predictions_count,
                     "obj", observations_with_objects,
