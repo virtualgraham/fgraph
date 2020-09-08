@@ -785,10 +785,48 @@ class MemoryGraph:
 
     from collections import Counter
 
-    # the goal here is to search through the set of all communities and find all the ones that have a 
-    # max_pool distance within a range of the max_pool distance of the query community
-    # candidate communities are ones that contain any member that is near any member of the query community
-    def search_group(self, features, feature_dis=0.12, community_dis=0.12, k=30, walk_length_short=10, walk_length_long=1000, member_portion_short=200, member_portion_long=500, walk_trials=1000):
+
+
+    def search_group(self, features, feature_dis=0.4, community_dis=0.25, k=30, member_portion=200, walk_trials=1000):
+        
+        if len(features) == 0:
+            return set()
+
+        lab, dis = self.knn_query(features, k=k)
+        features_max = np.max(features, axis=0)
+        
+        labels_merged = list(chain.from_iterable(lab))
+        distances_merged = list(chain.from_iterable(dis))
+
+        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
+
+        results = set()
+
+        for i in range(len(neighbor_nodes_merged)):
+            walk_length = 32
+            last_community = []
+            while True:
+                community = self.get_communities([neighbor_nodes_merged[i]], walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)[0]
+                if last_community == community:
+                    results.add(frozenset(last_community))
+                    break
+                community_features = np.array([self.get_node(c)["f"] for c in community])
+                community_features_max = np.max(community_features, axis=0)
+                d = self.distance(community_features_max, features_max)
+                print(walk_length, d, len(community))
+                
+                if d > community_dis:
+                    results.add(frozenset(last_community))
+                    break
+                last_community = community
+                walk_length = walk_length * 2 # 8 16 32 64 128 256 
+                
+        return results
+
+
+
+
+    def search_group_b(self, features, feature_dis=0.12, community_dis=0.12, k=30, walk_length_short=10, walk_length_long=1000, member_portion_short=200, member_portion_long=500, walk_trials=1000):
         
         if len(features) == 0:
             return set()
