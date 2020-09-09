@@ -810,26 +810,25 @@ class MemoryGraph:
         for i in range(len(neighbor_nodes_merged)):
             walk_length = initial_walk_length
             last_community = []
-            while True:
+            for j in range(10): # 16 32 64 128 256 512 1024 2048 4096 8192
                 if walk_length == initial_walk_length:
                     community = communities[i]
                 else:
                     community = self.get_communities([neighbor_nodes_merged[i]], walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)[0]
 
                 if last_community == community:
-                    results.add(frozenset(last_community))
                     break
                 community_features = np.array([self.get_node(c)["f"] for c in community])
                 community_features_max = np.max(community_features, axis=0)
                 d = self.distance(community_features_max, features_max)
-                # print(walk_length, d, len(community))
+                print(walk_length, d, len(community))
                 
                 if d > community_dis:
-                    results.add(frozenset(last_community))
                     break
                 last_community = community
-                walk_length = walk_length * 2 # 8 16 32 64 128 256 
-                
+                walk_length = walk_length * 2 
+            results.add(frozenset(last_community))
+
         return results
 
 
