@@ -1,0 +1,1529 @@
+search 001_apple.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:03:45.431066
+apple
+len(observations) 5534
+
+observations_of_sample_class 0.5652331044452475 3128 5534
+observations_not_of_sample_class 0.43476689555475245
+
+observations_true_positive 0.37791470339494987 3128 8277
+observations_false_negative 0.6220852966050501
+observations_false_positive 0.002227524087534475 2406 1080123
+observations_true_negative 0.9977724759124655
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.5234925606891151 1337 2554
+frame_false_negative 0.4765074393108849
+frame_false_positive 0.27493074792243766 794 2888
+frame_true_negative 0.7250692520775623
+
+pixel_true_positive 0.06420284175679307 2942617 45833127
+pixel_false_negative 0.935797158243207
+pixel_false_positive 0.00046780972261067986 2324787 4969514073
+pixel_true_negative 0.9995321902773893
+
+search 002_apple.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:04:56.959039
+apple
+len(observations) 5116
+
+observations_of_sample_class 0.5949960906958561 3044 5116
+observations_not_of_sample_class 0.40500390930414387
+
+observations_true_positive 0.3677660988280778 3044 8277
+observations_false_negative 0.6322339011719222
+observations_false_positive 0.001918300045457786 2072 1080123
+observations_true_negative 0.9980816999545422
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.5548159749412686 1417 2554
+frame_false_negative 0.44518402505873145
+frame_false_positive 0.264196675900277 763 2888
+frame_true_negative 0.735803324099723
+
+pixel_true_positive 0.06219113088225466 2850414 45833127
+pixel_false_negative 0.9378088691177453
+pixel_false_positive 0.00040118147784949437 1993677 4969514073
+pixel_true_negative 0.9995988185221505
+
+search 003_apple.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:06:01.984977
+apple
+len(observations) 5426
+
+observations_of_sample_class 0.5821968300774051 3159 5426
+observations_not_of_sample_class 0.4178031699225949
+
+observations_true_positive 0.3816600217470098 3159 8277
+observations_false_negative 0.6183399782529901
+observations_false_positive 0.002098835040083398 2267 1080123
+observations_true_negative 0.9979011649599167
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.566953797963978 1448 2554
+frame_false_negative 0.43304620203602195
+frame_false_positive 0.24065096952908588 695 2888
+frame_true_negative 0.7593490304709141
+
+pixel_true_positive 0.06420973633328575 2942933 45833127
+pixel_false_negative 0.9357902636667143
+pixel_false_positive 0.00043946711246188277 2183938 4969514073
+pixel_true_negative 0.9995605328875381
+
+search 004_bear.mp4
+frame 0
+
+2020-09-09 02:06:02.369858
+bear
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 40517
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1047883
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2722
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2720
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 203908522
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4811438678
+pixel_true_negative 1.0
+
+search 005_bear.mp4
+frame 0
+
+2020-09-09 02:06:02.444719
+bear
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 40517
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1047883
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2722
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2720
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 203908522
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4811438678
+pixel_true_negative 1.0
+
+search 006_bear.mp4
+frame 0
+
+2020-09-09 02:06:02.518587
+bear
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 40517
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1047883
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2722
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2720
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 203908522
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4811438678
+pixel_true_negative 1.0
+
+search 007_brush.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:06:26.034720
+brush
+len(observations) 527
+
+observations_of_sample_class 0.9981024667931688 526 527
+observations_not_of_sample_class 0.00189753320683117
+
+observations_true_positive 0.028380274090860042 526 18534
+observations_false_negative 0.9716197259091399
+observations_false_positive 9.346964947012055e-07 1 1069866
+observations_true_negative 0.9999990653035054
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.1424802110817942 378 2653
+frame_false_negative 0.8575197889182058
+frame_false_positive 0.0 0 2789
+frame_true_negative 1.0
+
+pixel_true_positive 0.005487272175461211 518106 94419592
+pixel_false_negative 0.9945127278245388
+pixel_false_positive 2.0809084822448378e-07 1024 4920927608
+pixel_true_negative 0.9999997919091518
+
+search 008_brush.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:06:52.409418
+brush
+len(observations) 1766
+
+observations_of_sample_class 0.7763306908267271 1371 1766
+observations_not_of_sample_class 0.22366930917327288
+
+observations_true_positive 0.07397215927484622 1371 18534
+observations_false_negative 0.9260278407251538
+observations_false_positive 0.0003692051154069762 395 1069866
+observations_true_negative 0.999630794884593
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.2751601960045232 730 2653
+frame_false_negative 0.7248398039954769
+frame_false_positive 0.039082108282538545 109 2789
+frame_true_negative 0.9609178917174614
+
+pixel_true_positive 0.013615521659953795 1285572 94419592
+pixel_false_negative 0.9863844783400462
+pixel_false_positive 7.774977209134347e-05 382601 4920927608
+pixel_true_negative 0.9999222502279087
+
+search 009_brush.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:07:16.803276
+brush
+len(observations) 1492
+
+observations_of_sample_class 0.5033512064343163 751 1492
+observations_not_of_sample_class 0.4966487935656837
+
+observations_true_positive 0.0405201251753534 751 18534
+observations_false_negative 0.9594798748246466
+observations_false_positive 0.0006926101025735934 741 1069866
+observations_true_negative 0.9993073898974264
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.1620806633999246 430 2653
+frame_false_negative 0.8379193366000754
+frame_false_positive 0.12262459662961635 342 2789
+frame_true_negative 0.8773754033703837
+
+pixel_true_positive 0.00770578419783894 727577 94419592
+pixel_false_negative 0.992294215802161
+pixel_false_positive 0.00015172484935283364 746627 4920927608
+pixel_true_negative 0.9998482751506471
+
+search 010_carrot.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:07:55.790983
+carrot
+len(observations) 2223
+
+observations_of_sample_class 0.7494376968061178 1666 2223
+observations_not_of_sample_class 0.2505623031938822
+
+observations_true_positive 0.1890603722197004 1666 8812
+observations_false_negative 0.8109396277802996
+observations_false_positive 0.0005159375613660026 557 1079588
+observations_true_negative 0.999484062438634
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.8333333333333334 5 6
+video_true_negative 0.16666666666666663
+
+frame_true_positive 0.33899584748961875 898 2649
+frame_false_negative 0.6610041525103812
+frame_false_positive 0.09738632295023272 272 2793
+frame_true_negative 0.9026136770497672
+
+pixel_true_positive 0.03126926238558583 1594265 50985053
+pixel_false_negative 0.9687307376144142
+pixel_false_positive 0.00010791497157872434 535729 4964362147
+pixel_true_negative 0.9998920850284213
+
+search 011_carrot.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:08:34.851295
+carrot
+len(observations) 2668
+
+observations_of_sample_class 0.724887556221889 1934 2668
+observations_not_of_sample_class 0.27511244377811095
+
+observations_true_positive 0.2194734453018611 1934 8812
+observations_false_negative 0.7805265546981389
+observations_false_positive 0.0006798889946905671 734 1079588
+observations_true_negative 0.9993201110053095
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.5 3 6
+video_true_negative 0.5
+
+frame_true_positive 0.35975839939599846 953 2649
+frame_false_negative 0.6402416006040015
+frame_false_positive 0.05800214822771214 162 2793
+frame_true_negative 0.9419978517722879
+
+pixel_true_positive 0.03550675920646783 1810314 50985053
+pixel_false_negative 0.9644932407935322
+pixel_false_positive 0.00014160691327179278 702988 4964362147
+pixel_true_negative 0.9998583930867282
+
+search 012_carrot.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:10:26.301103
+carrot
+len(observations) 5850
+
+observations_of_sample_class 0.5772649572649573 3377 5850
+observations_not_of_sample_class 0.4227350427350427
+
+observations_true_positive 0.38322741715842035 3377 8812
+observations_false_negative 0.6167725828415797
+observations_false_positive 0.002290688670122306 2473 1079588
+observations_true_negative 0.9977093113298777
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.5666289165722914 1501 2649
+frame_false_negative 0.4333710834277086
+frame_false_positive 0.17293233082706766 483 2793
+frame_true_negative 0.8270676691729324
+
+pixel_true_positive 0.06270010153760162 3196768 50985053
+pixel_false_negative 0.9372998984623984
+pixel_false_positive 0.00047035508910466277 2335013 4964362147
+pixel_true_negative 0.9995296449108954
+
+search 013_chain.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:10:53.135962
+chain
+len(observations) 2857
+
+observations_of_sample_class 0.7560378018900945 2160 2857
+observations_not_of_sample_class 0.2439621981099055
+
+observations_true_positive 0.11268781302170283 2160 19168
+observations_false_negative 0.8873121869782972
+observations_false_positive 0.0006518697532434495 697 1069232
+observations_true_negative 0.9993481302467565
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.5 3 6
+video_true_negative 0.5
+
+frame_true_positive 0.340393343419062 900 2644
+frame_false_negative 0.659606656580938
+frame_false_positive 0.04646175839885633 130 2798
+frame_true_negative 0.9535382416011436
+
+pixel_true_positive 0.03710928657218782 1907305 51396973
+pixel_false_negative 0.9628907134278122
+pixel_false_positive 0.00012766244039940492 633710 4963950227
+pixel_true_negative 0.9998723375596006
+
+search 014_chain.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:11:25.244270
+chain
+len(observations) 3956
+
+observations_of_sample_class 0.7128412537917088 2820 3956
+observations_not_of_sample_class 0.2871587462082912
+
+observations_true_positive 0.1471202003338898 2820 19168
+observations_false_negative 0.8528797996661102
+observations_false_positive 0.0010624448202074012 1136 1069232
+observations_true_negative 0.9989375551797925
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.3377458396369138 893 2644
+frame_false_negative 0.6622541603630863
+frame_false_positive 0.08506075768406005 238 2798
+frame_true_negative 0.9149392423159399
+
+pixel_true_positive 0.04472053247182475 2298500 51396973
+pixel_false_negative 0.9552794675281753
+pixel_false_positive 0.00020531773152285477 1019187 4963950227
+pixel_true_negative 0.9997946822684771
+
+search 015_chain.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:11:49.768958
+chain
+len(observations) 1925
+
+observations_of_sample_class 0.785974025974026 1513 1925
+observations_not_of_sample_class 0.214025974025974
+
+observations_true_positive 0.07893363939899833 1513 19168
+observations_false_negative 0.9210663606010017
+observations_false_positive 0.00038532329746958566 412 1069232
+observations_true_negative 0.9996146767025305
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.19591527987897125 518 2644
+frame_false_negative 0.8040847201210287
+frame_false_positive 0.05039313795568263 141 2798
+frame_true_negative 0.9496068620443173
+
+pixel_true_positive 0.023295282389490135 1197307 51396973
+pixel_false_negative 0.9767047176105099
+pixel_false_positive 7.874958090308024e-05 390909 4963950227
+pixel_true_negative 0.999921250419097
+
+search 016_clippers.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:12:11.234766
+clippers
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 5658
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1082742
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2649
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2793
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 30738076
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4984609124
+pixel_true_negative 1.0
+
+search 017_clippers.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:12:32.348164
+clippers
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 5658
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1082742
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2649
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2793
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 30738076
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4984609124
+pixel_true_negative 1.0
+
+search 018_clippers.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:12:53.736857
+clippers
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 5658
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1082742
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2649
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2793
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 30738076
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4984609124
+pixel_true_negative 1.0
+
+search 019_cologne.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:13:17.196632
+cologne
+len(observations) 983
+
+observations_of_sample_class 0.9501525940996948 934 983
+observations_not_of_sample_class 0.04984740590030523
+
+observations_true_positive 0.04398813168181604 934 21233
+observations_false_negative 0.956011868318184
+observations_false_positive 4.591596254381929e-05 49 1067167
+observations_true_negative 0.9999540840374562
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.11171240819482026 289 2587
+frame_false_negative 0.8882875918051798
+frame_false_positive 0.004203152364273205 12 2855
+frame_true_negative 0.9957968476357268
+
+pixel_true_positive 0.014440515778290438 840395 58197021
+pixel_false_negative 0.9855594842217096
+pixel_false_positive 9.849610812043143e-06 48826 4957150179
+pixel_true_negative 0.9999901503891879
+
+search 020_cologne.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:13:43.698451
+cologne
+len(observations) 1777
+
+observations_of_sample_class 0.6195835678109173 1101 1777
+observations_not_of_sample_class 0.3804164321890827
+
+observations_true_positive 0.051853247303725335 1101 21233
+observations_false_negative 0.9481467526962747
+observations_false_positive 0.0006334528710126906 676 1067167
+observations_true_negative 0.9993665471289873
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.18477000386548126 478 2587
+frame_false_negative 0.8152299961345187
+frame_false_positive 0.08651488616462347 247 2855
+frame_true_negative 0.9134851138353766
+
+pixel_true_positive 0.01693913164386885 985807 58197021
+pixel_false_negative 0.9830608683561312
+pixel_false_positive 0.00013389305871985767 663728 4957150179
+pixel_true_negative 0.9998661069412802
+
+search 021_cologne.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:14:06.156509
+cologne
+len(observations) 347
+
+observations_of_sample_class 0.9221902017291066 320 347
+observations_not_of_sample_class 0.0778097982708934
+
+observations_true_positive 0.015070880233598644 320 21233
+observations_false_negative 0.9849291197664014
+observations_false_positive 2.5300632422104507e-05 27 1067167
+observations_true_negative 0.9999746993675779
+
+video_true_positive 0.8333333333333334 5 6
+video_false_negative 0.16666666666666663
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.08349439505218399 216 2587
+frame_false_negative 0.916505604947816
+frame_false_positive 0.005954465849387041 17 2855
+frame_true_negative 0.9940455341506129
+
+pixel_true_positive 0.0052849784183970515 307570 58197021
+pixel_false_negative 0.994715021581603
+pixel_false_positive 5.28731207519868e-06 26210 4957150179
+pixel_true_negative 0.9999947126879248
+
+search 022_cup.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:14:32.985745
+cup
+len(observations) 2591
+
+observations_of_sample_class 0.49864917020455424 1292 2591
+observations_not_of_sample_class 0.5013508297954458
+
+observations_true_positive 0.3105022831050228 1292 4161
+observations_false_negative 0.6894977168949772
+observations_false_positive 0.001198075332099288 1299 1084239
+observations_true_negative 0.9988019246679007
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.32339955849889623 879 2718
+frame_false_negative 0.6766004415011038
+frame_false_positive 0.23788546255506607 648 2724
+frame_true_negative 0.762114537444934
+
+pixel_true_positive 0.013641849164185923 1228530 90055973
+pixel_false_negative 0.9863581508358141
+pixel_false_positive 0.00025378235365004943 1249952 4925291227
+pixel_true_negative 0.99974621764635
+
+search 023_cup.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:14:56.440484
+cup
+len(observations) 1635
+
+observations_of_sample_class 0.7168195718654434 1172 1635
+observations_not_of_sample_class 0.28318042813455657
+
+observations_true_positive 0.281663061763999 1172 4161
+observations_false_negative 0.718336938236001
+observations_false_positive 0.00042702762029404954 463 1084239
+observations_true_negative 0.999572972379706
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.16666666666666666 1 6
+video_true_negative 0.8333333333333334
+
+frame_true_positive 0.3189845474613687 867 2718
+frame_false_negative 0.6810154525386314
+frame_false_positive 0.07525697503671072 205 2724
+frame_true_negative 0.9247430249632893
+
+pixel_true_positive 0.012480504763409752 1123944 90055973
+pixel_false_negative 0.9875194952365902
+pixel_false_positive 8.746934549541511e-05 430812 4925291227
+pixel_true_negative 0.9999125306545046
+
+search 024_cup.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:15:32.139742
+cup
+len(observations) 3230
+
+observations_of_sample_class 0.5436532507739938 1756 3230
+observations_not_of_sample_class 0.45634674922600615
+
+observations_true_positive 0.42201393895698147 1756 4161
+observations_false_negative 0.5779860610430185
+observations_false_positive 0.0013594788602881837 1474 1084239
+observations_true_negative 0.9986405211397118
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.41353936718175127 1124 2718
+frame_false_negative 0.5864606328182487
+frame_false_positive 0.20337738619676946 554 2724
+frame_true_negative 0.7966226138032305
+
+pixel_true_positive 0.018423830699158622 1659176 90055973
+pixel_false_negative 0.9815761693008414
+pixel_false_positive 0.00028640052638251843 1410606 4925291227
+pixel_true_negative 0.9997135994736175
+
+search 025_flowers.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:17:31.854313
+flowers
+len(observations) 16068
+
+observations_of_sample_class 0.8512571570823998 13678 16068
+observations_not_of_sample_class 0.1487428429176002
+
+observations_true_positive 0.14143607560904992 13678 96708
+observations_false_negative 0.8585639243909501
+observations_false_positive 0.0024100224666529528 2390 991692
+observations_true_negative 0.997589977533347
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.9426681367144433 2565 2721
+frame_false_negative 0.05733186328555673
+frame_false_positive 0.02388827636898199 65 2721
+frame_true_negative 0.9761117236310181
+
+pixel_true_positive 0.04617261259062309 12848988 278281589
+pixel_false_negative 0.9538273874093769
+pixel_false_positive 0.0004731699292479992 2241437 4737065611
+pixel_true_negative 0.999526830070752
+
+search 026_flowers.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:20:53.761925
+flowers
+len(observations) 21444
+
+observations_of_sample_class 0.8242865137101287 17676 21444
+observations_not_of_sample_class 0.17571348628987127
+
+observations_true_positive 0.18277701948132521 17676 96708
+observations_false_negative 0.8172229805186748
+observations_false_positive 0.003799566800982563 3768 991692
+observations_true_negative 0.9962004331990174
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.9665564130834252 2630 2721
+frame_false_negative 0.033443586916574786
+frame_false_positive 0.04887908857037854 133 2721
+frame_true_negative 0.9511209114296215
+
+pixel_true_positive 0.058424202831470824 16258380 278281589
+pixel_false_negative 0.9415757971685291
+pixel_false_positive 0.0007504498125896868 3554930 4737065611
+pixel_true_negative 0.9992495501874104
+
+search 027_flowers.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:23:39.293585
+flowers
+len(observations) 21031
+
+observations_of_sample_class 0.839903000332842 17664 21031
+observations_not_of_sample_class 0.16009699966715796
+
+observations_true_positive 0.18265293460727136 17664 96708
+observations_false_negative 0.8173470653927286
+observations_false_positive 0.0033952073829374443 3367 991692
+observations_true_negative 0.9966047926170626
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.9691289966923925 2637 2721
+frame_false_negative 0.030871003307607503
+frame_false_positive 0.03307607497243661 90 2721
+frame_true_negative 0.9669239250275634
+
+pixel_true_positive 0.058645536194634855 16319973 278281589
+pixel_false_negative 0.9413544638053651
+pixel_false_positive 0.0006618962576155038 3135446 4737065611
+pixel_true_negative 0.9993381037423845
+
+search 028_hanger.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:24:05.020431
+hanger
+len(observations) 730
+
+observations_of_sample_class 0.12602739726027398 92 730
+observations_not_of_sample_class 0.873972602739726
+
+observations_true_positive 0.0782312925170068 92 1176
+observations_false_negative 0.9217687074829932
+observations_false_positive 0.0005868155964180334 638 1087224
+observations_true_negative 0.999413184403582
+
+video_true_positive 1.0 7 7
+video_false_negative 0.0
+video_false_positive 0.0 0 5
+video_true_negative 1.0
+
+frame_true_positive 0.02236925015752993 71 3174
+frame_false_negative 0.9776307498424701
+frame_false_positive 0.12522045855379188 284 2268
+frame_true_negative 0.8747795414462081
+
+pixel_true_positive 0.0012823358550498047 83578 65176373
+pixel_false_negative 0.9987176641449502
+pixel_false_positive 0.00011941709097709084 591135 4950170827
+pixel_true_negative 0.9998805829090229
+
+search 029_hanger.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:24:29.701999
+hanger
+len(observations) 913
+
+observations_of_sample_class 0.07995618838992333 73 913
+observations_not_of_sample_class 0.9200438116100766
+
+observations_true_positive 0.06207482993197279 73 1176
+observations_false_negative 0.9379251700680272
+observations_false_positive 0.0007726098761616741 840 1087224
+observations_true_negative 0.9992273901238383
+
+video_true_positive 1.0 7 7
+video_false_negative 0.0
+video_false_positive 0.0 0 5
+video_true_negative 1.0
+
+frame_true_positive 0.020163831127914304 64 3174
+frame_false_negative 0.9798361688720857
+frame_false_positive 0.18606701940035272 422 2268
+frame_true_negative 0.8139329805996472
+
+pixel_true_positive 0.0010646189225656973 69388 65176373
+pixel_false_negative 0.9989353810774343
+pixel_false_positive 0.00015902037071255197 787178 4950170827
+pixel_true_negative 0.9998409796292874
+
+search 030_hanger.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:24:53.705062
+hanger
+len(observations) 66
+
+observations_of_sample_class 0.0 0 66
+observations_not_of_sample_class 1.0
+
+observations_true_positive 0.0 0 1176
+observations_false_negative 1.0
+observations_false_positive 6.070506169841725e-05 66 1087224
+observations_true_negative 0.9999392949383016
+
+video_true_positive 0.42857142857142855 3 7
+video_false_negative 0.5714285714285714
+video_false_positive 0.0 0 5
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 3174
+frame_false_negative 1.0
+frame_false_positive 0.01675485008818342 38 2268
+frame_true_negative 0.9832451499118166
+
+pixel_true_positive 0.0 0 65176373
+pixel_false_negative 1.0
+pixel_false_positive 1.2861172316063993e-05 63665 4950170827
+pixel_true_negative 0.999987138827684
+
+search 031_ketchup.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:25:24.834898
+ketchup
+len(observations) 2404
+
+observations_of_sample_class 0.7915973377703827 1903 2404
+observations_not_of_sample_class 0.20840266222961734
+
+observations_true_positive 0.10071447472876423 1903 18895
+observations_false_negative 0.8992855252712357
+observations_false_positive 0.0004684410077559245 501 1069505
+observations_true_negative 0.9995315589922441
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.3594384927964536 973 2707
+frame_false_negative 0.6405615072035464
+frame_false_positive 0.057038391224862886 156 2735
+frame_true_negative 0.9429616087751371
+
+pixel_true_positive 0.020456659957204717 1709696 83576498
+pixel_false_negative 0.9795433400427953
+pixel_false_positive 9.761017474003397e-05 481391 4931770702
+pixel_true_negative 0.9999023898252599
+
+search 032_ketchup.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:25:50.335197
+ketchup
+len(observations) 1671
+
+observations_of_sample_class 0.805505685218432 1346 1671
+observations_not_of_sample_class 0.19449431478156798
+
+observations_true_positive 0.07123577666049219 1346 18895
+observations_false_negative 0.9287642233395078
+observations_false_positive 0.0003038788972468572 325 1069505
+observations_true_negative 0.9996961211027532
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.5 3 6
+video_true_negative 0.5
+
+frame_true_positive 0.2981159955670484 807 2707
+frame_false_negative 0.7018840044329516
+frame_false_positive 0.03363802559414991 92 2735
+frame_true_negative 0.96636197440585
+
+pixel_true_positive 0.015331618704578888 1281363 83576498
+pixel_false_negative 0.9846683812954211
+pixel_false_positive 6.439107152147562e-05 317562 4931770702
+pixel_true_negative 0.9999356089284785
+
+search 033_ketchup.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:26:24.157893
+ketchup
+len(observations) 3916
+
+observations_of_sample_class 0.5988253319713994 2345 3916
+observations_not_of_sample_class 0.4011746680286006
+
+observations_true_positive 0.12410690658904472 2345 18895
+observations_false_negative 0.8758930934109552
+observations_false_positive 0.0014689038386917312 1571 1069505
+observations_true_negative 0.9985310961613083
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 1.0 6 6
+video_true_negative 0.0
+
+frame_true_positive 0.42741041743627634 1157 2707
+frame_false_negative 0.5725895825637237
+frame_false_positive 0.170018281535649 465 2735
+frame_true_negative 0.829981718464351
+
+pixel_true_positive 0.026225889483907305 2191868 83576498
+pixel_false_negative 0.9737741105160926
+pixel_false_positive 0.00030897989628391284 1523818 4931770702
+pixel_true_negative 0.9996910201037161
+
+search 034_notebook.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:26:45.133876
+notebook
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 3467
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1084933
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2617
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2825
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 88062419
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4927284781
+pixel_true_negative 1.0
+
+search 035_notebook.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:27:05.667403
+notebook
+len(observations) 441
+
+observations_of_sample_class 0.5963718820861678 263 441
+observations_not_of_sample_class 0.40362811791383224
+
+observations_true_positive 0.07585809056821459 263 3467
+observations_false_negative 0.9241419094317854
+observations_false_positive 0.00016406543076853594 178 1084933
+observations_true_negative 0.9998359345692315
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.5 3 6
+video_true_negative 0.5
+
+frame_true_positive 0.06992739778372183 183 2617
+frame_false_negative 0.9300726022162782
+frame_false_positive 0.024424778761061947 69 2825
+frame_true_negative 0.975575221238938
+
+pixel_true_positive 0.0029015328320699434 255516 88062419
+pixel_false_negative 0.99709846716793
+pixel_false_positive 3.3702334527191196e-05 166061 4927284781
+pixel_true_negative 0.9999662976654728
+
+search 036_notebook.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:27:25.417314
+notebook
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 3467
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1084933
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2617
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2825
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 88062419
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4927284781
+pixel_true_negative 1.0
+
+search 037_opener.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:27:46.798412
+opener
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 4424
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1083976
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2617
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2825
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 22775542
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4992571658
+pixel_true_negative 1.0
+
+search 038_opener.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:28:09.485777
+opener
+len(observations) 67
+
+observations_of_sample_class 0.835820895522388 56 67
+observations_not_of_sample_class 0.16417910447761197
+
+observations_true_positive 0.012658227848101266 56 4424
+observations_false_negative 0.9873417721518988
+observations_false_positive 1.0147826151132498e-05 11 1083976
+observations_true_negative 0.9999898521738488
+
+video_true_positive 0.16666666666666666 1 6
+video_false_negative 0.8333333333333334
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.016813144822315627 44 2617
+frame_false_negative 0.9831868551776843
+frame_false_positive 0.0010619469026548673 3 2825
+frame_true_negative 0.9989380530973452
+
+pixel_true_positive 0.0024093828370802327 54875 22775542
+pixel_false_negative 0.9975906171629197
+pixel_false_positive 2.0294150377921327e-06 10132 4992571658
+pixel_true_negative 0.9999979705849622
+
+search 039_opener.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:28:30.453914
+opener
+len(observations) 0
+
+observations_of_sample_class None 0 0
+observations_not_of_sample_class None
+
+observations_true_positive 0.0 0 4424
+observations_false_negative 1.0
+observations_false_positive 0.0 0 1083976
+observations_true_negative 1.0
+
+video_true_positive 0.0 0 6
+video_false_negative 1.0
+video_false_positive 0.0 0 6
+video_true_negative 1.0
+
+frame_true_positive 0.0 0 2617
+frame_false_negative 1.0
+frame_false_positive 0.0 0 2825
+frame_true_negative 1.0
+
+pixel_true_positive 0.0 0 22775542
+pixel_false_negative 1.0
+pixel_false_positive 0.0 0 4992571658
+pixel_true_negative 1.0
+
+search 040_pepper.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:29:06.160462
+pepper
+len(observations) 5320
+
+observations_of_sample_class 0.3304511278195489 1758 5320
+observations_not_of_sample_class 0.6695488721804511
+
+observations_true_positive 0.3470193446506119 1758 5066
+observations_false_negative 0.6529806553493881
+observations_false_positive 0.00328799797661663 3562 1083334
+observations_true_negative 0.9967120020233834
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.8333333333333334 5 6
+video_true_negative 0.16666666666666663
+
+frame_true_positive 0.38903794557301646 1015 2609
+frame_false_negative 0.6109620544269836
+frame_false_positive 0.42252029650547124 1197 2833
+frame_true_negative 0.5774797034945287
+
+pixel_true_positive 0.049301999792052895 1641131 33287311
+pixel_false_negative 0.9506980002079471
+pixel_false_positive 0.0006897343822757085 3436298 4982059889
+pixel_true_negative 0.9993102656177243
+
+search 041_pepper.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:29:34.022507
+pepper
+len(observations) 2915
+
+observations_of_sample_class 0.3941680960548885 1149 2915
+observations_not_of_sample_class 0.6058319039451114
+
+observations_true_positive 0.22680615870509277 1149 5066
+observations_false_negative 0.7731938412949072
+observations_false_positive 0.0016301528429828658 1766 1083334
+observations_true_negative 0.9983698471570172
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.8333333333333334 5 6
+video_true_negative 0.16666666666666663
+
+frame_true_positive 0.26140283633576084 682 2609
+frame_false_negative 0.7385971636642392
+frame_false_positive 0.2308506883162725 654 2833
+frame_true_negative 0.7691493116837275
+
+pixel_true_positive 0.03272445166868541 1089309 33287311
+pixel_false_negative 0.9672755483313146
+pixel_false_positive 0.0003414236355840804 1700993 4982059889
+pixel_true_negative 0.9996585763644159
+
+search 042_pepper.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:30:15.043915
+pepper
+len(observations) 3321
+
+observations_of_sample_class 0.5576633544113219 1852 3321
+observations_not_of_sample_class 0.44233664558867813
+
+observations_true_positive 0.3655744176865377 1852 5066
+observations_false_negative 0.6344255823134624
+observations_false_positive 0.001355999165538975 1469 1083334
+observations_true_negative 0.998644000834461
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.8333333333333334 5 6
+video_true_negative 0.16666666666666663
+
+frame_true_positive 0.4258336527405136 1111 2609
+frame_false_negative 0.5741663472594865
+frame_false_positive 0.17296152488528063 490 2833
+frame_true_negative 0.8270384751147194
+
+pixel_true_positive 0.05222653761368709 1738481 33287311
+pixel_false_negative 0.9477734623863129
+pixel_false_positive 0.0002830226917009267 1410036 4982059889
+pixel_true_negative 0.9997169773082991
+
+search 043_rock.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:30:38.626713
+rock
+len(observations) 349
+
+observations_of_sample_class 0.9856733524355301 344 349
+observations_not_of_sample_class 0.014326647564469885
+
+observations_true_positive 0.06216118539934948 344 5534
+observations_false_negative 0.9378388146006505
+observations_false_positive 4.617376480561769e-06 5 1082866
+observations_true_negative 0.9999953826235194
+
+video_true_positive 0.8 4 5
+video_false_negative 0.19999999999999996
+video_false_positive 0.0 0 7
+video_true_negative 1.0
+
+frame_true_positive 0.12061295106277806 244 2023
+frame_false_negative 0.879387048937222
+frame_false_positive 0.0 0 3419
+frame_true_negative 1.0
+
+pixel_true_positive 0.01720651682393842 328341 19082363
+pixel_false_negative 0.9827934831760616
+pixel_false_positive 9.84735629617706e-07 4920 4996264837
+pixel_true_negative 0.9999990152643704
+
+search 044_rock.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:31:03.885246
+rock
+len(observations) 1566
+
+observations_of_sample_class 0.5798212005108557 908 1566
+observations_not_of_sample_class 0.4201787994891443
+
+observations_true_positive 0.1640766172750271 908 5534
+observations_false_negative 0.8359233827249729
+observations_false_positive 0.0006076467448419287 658 1082866
+observations_true_negative 0.9993923532551581
+
+video_true_positive 1.0 5 5
+video_false_negative 0.0
+video_false_positive 0.5714285714285714 4 7
+video_true_negative 0.4285714285714286
+
+frame_true_positive 0.2723677706376668 551 2023
+frame_false_negative 0.7276322293623332
+frame_false_positive 0.08599005557180463 294 3419
+frame_true_negative 0.9140099444281954
+
+pixel_true_positive 0.04476688762287983 854258 19082363
+pixel_false_negative 0.9552331123771202
+pixel_false_positive 0.00012431426680995213 621107 4996264837
+pixel_true_negative 0.9998756857331901
+
+search 045_rock.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:31:27.404475
+rock
+len(observations) 266
+
+observations_of_sample_class 0.5 133 266
+observations_not_of_sample_class 0.5
+
+observations_true_positive 0.02403324900614384 133 5534
+observations_false_negative 0.9759667509938562
+observations_false_positive 0.00012282221438294304 133 1082866
+observations_true_negative 0.999877177785617
+
+video_true_positive 1.0 5 5
+video_false_negative 0.0
+video_false_positive 0.2857142857142857 2 7
+video_true_negative 0.7142857142857143
+
+frame_true_positive 0.05437469105289174 110 2023
+frame_false_negative 0.9456253089471083
+frame_false_positive 0.02427610412401287 83 3419
+frame_true_negative 0.9757238958759872
+
+pixel_true_positive 0.006836889121121949 130464 19082363
+pixel_false_negative 0.9931631108788781
+pixel_false_positive 2.6094293287759917e-05 130374 4996264837
+pixel_true_negative 0.9999739057067122
+
+search 046_shorts.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:31:53.436364
+shorts
+len(observations) 1372
+
+observations_of_sample_class 0.0 0 1372
+observations_not_of_sample_class 1.0
+
+observations_true_positive 0.0 0 35699
+observations_false_negative 1.0
+observations_false_positive 0.0013033140464386373 1372 1052701
+observations_true_negative 0.9986966859535613
+
+video_true_positive 0.6666666666666666 4 6
+video_false_negative 0.33333333333333337
+video_false_positive 0.5 3 6
+video_true_negative 0.5
+
+frame_true_positive 0.0 0 2721
+frame_false_negative 1.0
+frame_false_positive 0.22418228592429254 610 2721
+frame_true_negative 0.7758177140757074
+
+pixel_true_positive 0.0 0 122816631
+pixel_false_negative 1.0
+pixel_false_positive 0.0002661814743175292 1302301 4892530569
+pixel_true_negative 0.9997338185256824
+
+search 047_shorts.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:32:25.466470
+shorts
+len(observations) 5682
+
+observations_of_sample_class 0.9178106300598381 5215 5682
+observations_not_of_sample_class 0.0821893699401619
+
+observations_true_positive 0.14608252331998095 5215 35699
+observations_false_negative 0.853917476680019
+observations_false_positive 0.00044362074321198516 467 1052701
+observations_true_negative 0.999556379256788
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.8333333333333334 5 6
+video_true_negative 0.16666666666666663
+
+frame_true_positive 0.41639103270856304 1133 2721
+frame_false_negative 0.583608967291437
+frame_false_positive 0.01727306137449467 47 2721
+frame_true_negative 0.9827269386255053
+
+pixel_true_positive 0.03698575643228644 4542466 122816631
+pixel_false_negative 0.9630142435677136
+pixel_false_positive 8.222799925851623e-05 402303 4892530569
+pixel_true_negative 0.9999177720007415
+
+search 048_shorts.mp4
+frame 0
+frame 10
+frame 20
+
+2020-09-09 02:32:52.415523
+shorts
+len(observations) 3001
+
+observations_of_sample_class 0.895034988337221 2686 3001
+observations_not_of_sample_class 0.10496501166277905
+
+observations_true_positive 0.07524020280680131 2686 35699
+observations_false_negative 0.9247597971931987
+observations_false_positive 0.0002992302657639729 315 1052701
+observations_true_negative 0.999700769734236
+
+video_true_positive 1.0 6 6
+video_false_negative 0.0
+video_false_positive 0.8333333333333334 5 6
+video_true_negative 0.16666666666666663
+
+frame_true_positive 0.29106945975744214 792 2721
+frame_false_negative 0.7089305402425579
+frame_false_positive 0.03307607497243661 90 2721
+frame_true_negative 0.9669239250275634
+
+pixel_true_positive 0.019924850405642538 2447103 122816631
+pixel_false_negative 0.9800751495943575
+pixel_false_positive 6.1179178296106e-05 299321 4892530569
+pixel_true_negative 0.9999388208217039
