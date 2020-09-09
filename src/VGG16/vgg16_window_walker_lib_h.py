@@ -790,7 +790,7 @@ class MemoryGraph:
 
 
 
-    def search_group(self, features, feature_dis=0.4, community_dis=0.2, k=30, initial_walk_length=8, member_portion=100, walk_trials=1000):
+    def search_group(self, features, feature_dis=0.4, community_dis=0.2, k=100, initial_walk_length=16, member_portion=100, walk_trials=1000):
         
         if len(features) == 0:
             return set()
