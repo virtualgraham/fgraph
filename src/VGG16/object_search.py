@@ -9,17 +9,17 @@ from datetime import datetime
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-from vgg16_window_walker_lib_h import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, paint_windows, MemoryGraph, extract_window_pixels
+from vgg16_window_walker_lib_i import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, paint_windows, MemoryGraph, extract_window_pixels
 
 from itertools import chain
 
 mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
-db_path = "../../data/table_objects_h.db"
+db_path = "../../data/table_objects_i.db"
 max_frames = 30
 walker_count = 4
 window_size = 32
-stride = 16
+stride = 32
 center_size = 16
 center_threshold = center_size*center_size*0.9
 grid_margin = 16

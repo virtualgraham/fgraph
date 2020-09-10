@@ -1,11 +1,11 @@
-stride = 16
+stride = 32
 window_size = 32
 center_size = 16
 
 
 video_path = "../../media/tabletop_objects/videos/"
 mask_path = "../../media/tabletop_objects/masks/"
-db_path = "../../data/table_objects_h.db"
+db_path = "../../data/table_objects_i.db"
 
 video_files = [
 	'333_apple_bear_carrot_chain_clippers_cup_notebook_opener.mp4', 
@@ -22,6 +22,6 @@ video_files = [
 	# '370_apple_brush_flowers_hanger_ketchup_opener_rock_shorts.mp4'
 ] 
 
-from vgg16_window_walker_lib_h import build_graph
+from vgg16_window_walker_lib_i import build_graph
 
 build_graph(db_path, video_path, mask_path, video_files,  stride=stride, window_size=window_size, center_size=center_size, keep_times=False, max_elements=1200000, walker_count = 500)
