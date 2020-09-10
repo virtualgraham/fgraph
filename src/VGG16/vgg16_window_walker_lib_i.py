@@ -39,7 +39,7 @@ class MemoryGraphWalker:
         self.last_feats = dict()
         self.last_obs = dict()
 
-    def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects, keep_times=False):
+    def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects, keep_times=False, prevent_similar_adjacencies=False):
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
         else:
@@ -56,21 +56,22 @@ class MemoryGraphWalker:
 
         community_cache = dict([(neighbor_nodes_merged[i], frozenset(community_cache_list[i])) for i in range(len(neighbor_nodes_merged))])
 
-        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache, keep_times) for i in range(len(feats))]
+        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache, keep_times, prevent_similar_adjacencies) for i in range(len(feats))]
 
 
 
-    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, community_cache, keep_times=False):
+    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, community_cache, keep_times=False, prevent_similar_adjacencies=False):
  
         stats = {"adj":adj}
 
         tm = TimeMarker(enabled=keep_times)
 
-        # if adj and walker_id in self.last_feats:
-        #     d = self.memory_graph.distance(feats, self.last_feats[walker_id])
-        #     if d <= self.distance_threshold:
-        #         stats["skipped"] = True
-        #         return self.last_ids[walker_id], self.last_obs[walker_id], stats
+        if prevent_similar_adjacencies:
+            if adj and walker_id in self.last_feats:
+                d = self.memory_graph.distance(feats, self.last_feats[walker_id])
+                if d <= self.distance_threshold:
+                    stats["skipped"] = True
+                    return self.last_ids[walker_id], self.last_obs[walker_id], stats
 
         stats["skipped"] = False
 
@@ -125,18 +126,18 @@ class MemoryGraphWalker:
                         bar.update(foo)
                         baz += 1
                 if baz >= self.history_community_matches:
-                    accurate_predictions.update(bar)
-
-                    # for b in bar:
-                    #     if b not in accurate_predictions and b not in skipped_accurate_predictions:
-                    #         d = self.memory_graph.distance(self.memory_graph.get_node(b)["f"], feats)
-                    #         if d > self.distance_threshold:
-                    #             accurate_predictions.add(b)
-                    #             if len(accurate_predictions) >= self.accurate_prediction_limit:
-                    #                 break
-                    #         else:
-                    #             skipped_accurate_predictions.add(b)
-                    
+                    if prevent_similar_adjacencies:
+                        for b in bar:
+                            if b not in accurate_predictions and b not in skipped_accurate_predictions:
+                                d = self.memory_graph.distance(self.memory_graph.get_node(b)["f"], feats)
+                                if d > self.distance_threshold:
+                                    accurate_predictions.add(b)
+                                    if len(accurate_predictions) >= self.accurate_prediction_limit:
+                                        break
+                                else:
+                                    skipped_accurate_predictions.add(b)
+                    else:
+                        accurate_predictions.update(bar)
 
                     add_predicted_observations.add(nn)
 
@@ -1366,7 +1367,7 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
 
 
-def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, window_size = 32, center_size = 16, stride = 24, runs = 1, max_frames=30*30, walker_count = 500, max_elements=12000000, keep_times=False):
+def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, window_size = 32, center_size = 16, stride = 24, runs = 1, max_frames=30*30, walker_count = 500, max_elements=12000000, keep_times=False, prevent_similar_adjacencies=False):
 
     print("Starting...")
 
@@ -1470,7 +1471,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 t3.mark(p="TIME preprocess_input + model.predict")
 
                 objects = extract_objects(obj_frame, pos, center_size)
-                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, objects, keep_times)
+                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, objects, keep_times, prevent_similar_adjacencies)
 
                 observations_with_objects = len([x for x in objects if x is not None])
 

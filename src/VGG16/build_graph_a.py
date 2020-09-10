@@ -23,4 +23,4 @@ video_files = [
 
 from vgg16_window_walker_lib_i import build_graph
 
-build_graph(db_path, video_path, mask_path, video_files,  stride=stride, window_size=window_size, center_size=center_size, keep_times=False, max_elements=1200000, walker_count = 500)
+build_graph(db_path, video_path, mask_path, video_files,  stride=stride, window_size=window_size, center_size=center_size, keep_times=False, max_elements=1200000, walker_count = 200, prevent_similar_adjacencies=False)
