@@ -856,7 +856,7 @@ class MemoryGraph:
                 community_features = np.array(community_features_list)
                 community_features_max = np.max(community_features, axis=0)
                 d = self.distance(community_features_max, features_max)
-                print(walk_length, d, len(community))
+                # print(walk_length, d, len(community))
 
                 if d >  params["community_dis"]:
                     break
