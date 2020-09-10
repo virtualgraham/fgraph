@@ -80,16 +80,16 @@ def next_pos(kp_grid, shape, g_pos, walk_t, walk_length, stride):
     return loc, pos, False
 
 
-def search(files, params):
+def search(files, db_path, mask_path, video_path, params):
     memory_graph = MemoryGraph(db_path, params)
     cnn = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
 
     for file in files:
-        search_file(file, memory_graph, cnn, orb, params)
+        search_file(file, memory_graph, cnn, orb, mask_path, video_path, params)
 
 
-def search_file(file, memory_graph, cnn, orb, params):
+def search_file(file, memory_graph, cnn, orb,  mask_path, video_path, params):
     print("search", file)
 
     mask = cv2.VideoCapture(join(mask_path,"mask_"+file))
@@ -396,4 +396,4 @@ mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
 db_path = "../../data/table_objects_i.db"
 
-search(files, PARAMETERS)
+search(files, db_path, mask_path, video_path, PARAMETERS)
