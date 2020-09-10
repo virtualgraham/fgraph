@@ -849,9 +849,11 @@ class MemoryGraph:
                 if last_community == community:
                     break
 
-
-                community_features = np.array([i for i in [self.get_node(c)["f"] for c in community] if i is not None])
-
+                
+                community_features_list = [i for i in [self.get_node(c)["f"] for c in community] if i is not None]
+                if len(community_features_list) == 0:
+                    break
+                community_features = np.array(community_features_list)
                 community_features_max = np.max(community_features, axis=0)
                 d = self.distance(community_features_max, features_max)
                 print(walk_length, d, len(community))
