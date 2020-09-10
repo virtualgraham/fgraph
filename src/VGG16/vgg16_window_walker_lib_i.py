@@ -25,21 +25,24 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 # from collections import Counter
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 50, accurate_prediction_limit = 12, distance_threshold = 0.15, prediction_history_length=7, history_community_matches=1, identical_distance=0.01):
+    def __init__(self, memory_graph, params):
 
-        self.knn = knn
-        self.accurate_prediction_limit = accurate_prediction_limit
-        self.identical_distance = identical_distance
-        self.distance_threshold = distance_threshold
-        self.prediction_history_length = prediction_history_length
-        self.history_community_matches = history_community_matches
+        self.knn = params["knn"]
+        self.accurate_prediction_limit = params["accurate_prediction_limit"]
+        self.identical_distance = params["identical_distance"]
+        self.distance_threshold = params["distance_threshold"]
+        self.prediction_history_length = params["prediction_history_length"]
+        self.history_community_matches = params["history_community_matches"]
+        self.keep_times = params["keep_times"]
+        self.prevent_similar_adjacencies = params["history_community_matches"]
         self.memory_graph = memory_graph
+
         self.last_ids = dict()
         self.history_nn = dict()
         self.last_feats = dict()
         self.last_obs = dict()
 
-    def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects, keep_times=False, prevent_similar_adjacencies=False):
+    def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects):
         if self.memory_graph.index_count() >= self.knn:
             labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
         else:
@@ -56,17 +59,17 @@ class MemoryGraphWalker:
 
         community_cache = dict([(neighbor_nodes_merged[i], frozenset(community_cache_list[i])) for i in range(len(neighbor_nodes_merged))])
 
-        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache, keep_times, prevent_similar_adjacencies) for i in range(len(feats))]
+        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache) for i in range(len(feats))]
 
 
 
-    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, community_cache, keep_times=False, prevent_similar_adjacencies=False):
+    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, community_cache):
  
         stats = {"adj":adj}
 
-        tm = TimeMarker(enabled=keep_times)
+        tm = TimeMarker(enabled=self.keep_times)
 
-        if prevent_similar_adjacencies:
+        if self.prevent_similar_adjacencies:
             if adj and walker_id in self.last_feats:
                 d = self.memory_graph.distance(feats, self.last_feats[walker_id])
                 if d <= self.distance_threshold:
@@ -126,7 +129,7 @@ class MemoryGraphWalker:
                         bar.update(foo)
                         baz += 1
                 if baz >= self.history_community_matches:
-                    if prevent_similar_adjacencies:
+                    if self.prevent_similar_adjacencies:
                         for b in bar:
                             if b not in accurate_predictions and b not in skipped_accurate_predictions:
                                 d = self.memory_graph.distance(self.memory_graph.get_node(b)["f"], feats)
@@ -209,7 +212,7 @@ class MemoryGraphWalker:
 
         tm.mark(s="make_predictions")
 
-        if keep_times:
+        if self.keep_times:
             stats["time"] = tm.saved
 
         self.last_ids[walker_id] = node_id
@@ -223,16 +226,17 @@ class MemoryGraphWalker:
         
 MAX_KEY_VALUE = 18446744073709551615
 
+
 class MemoryGraph:
     #def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=100, M=48, rebuild_index=False):
-    def __init__(self, path, space='cosine', dim=512, max_elements=1000000, ef=300, M=64, rebuild_index=False):
-        self.space = space
-        self.dim = dim
-        self.max_elements = max_elements
-        self.ef = ef
-        self.M = M
+    def __init__(self, path, params):
+        self.space = params["space"]
+        self.dim = params["dim"]
+        self.max_elements = params["max_elements"]
+        self.ef = params["ef"]
+        self.M = params["M"]
         self.path = path
-        self.open(rebuild_index)
+        self.open(params["rebuild_index"])
 
     def save(self):
         print("Saving Index")
@@ -814,37 +818,33 @@ class MemoryGraph:
         return observation_ids
 
 
-
-
-
-
-    def search_group(self, features, feature_dis=0.4, community_dis=0.200, k=100, initial_walk_length=8, member_portion=100, walk_trials=1000):
+    def search_group(self, features, params):
         
         if len(features) == 0:
             return set()
 
-        lab, dis = self.knn_query(features, k=k)
+        lab, dis = self.knn_query(features, k=params["search_knn"])
         features_max = np.max(features, axis=0)
         
         labels_merged = list(chain.from_iterable(lab))
         distances_merged = list(chain.from_iterable(dis))
 
-        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
+        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= params["feature_dis"]]))
 
         results = set()
 
-        communities = self.get_communities(neighbor_nodes_merged, walk_length=initial_walk_length, walk_trials=walk_trials, member_portion=member_portion)
+        communities = self.get_communities(neighbor_nodes_merged, walk_length= params["initial_walk_length"], walk_trials=params["walk_trials"], member_portion=params["member_portion"])
 
         for i in range(len(neighbor_nodes_merged)):
             
-            walk_length = initial_walk_length
+            walk_length =  params["initial_walk_length"]
             last_community = frozenset()
 
             for j in range(9): # 16 32 64 128 256 512 1024 2048 4096
-                if walk_length == initial_walk_length:
+                if walk_length ==  params["initial_walk_length"]:
                     community = frozenset(communities[i])
                 else:
-                    community = frozenset(self.get_communities([neighbor_nodes_merged[i]], walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)[0])
+                    community = frozenset(self.get_communities([neighbor_nodes_merged[i]], walk_length=walk_length, walk_trials=params["walk_trials"], member_portion=params["member_portion"])[0])
 
                 if last_community == community:
                     break
@@ -858,7 +858,7 @@ class MemoryGraph:
                 d = self.distance(community_features_max, features_max)
                 print(walk_length, d, len(community))
 
-                if d > community_dis:
+                if d >  params["community_dis"]:
                     break
 
                 last_community = community
@@ -1365,13 +1365,11 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
     cap.release() 
     cv2.destroyAllWindows() 
 
-
-
-def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, window_size = 32, center_size = 16, stride = 24, runs = 1, max_frames=30*30, walker_count = 500, max_elements=12000000, keep_times=False, prevent_similar_adjacencies=False):
+def build_graph(db_path, video_path, mask_path, video_files, params):
 
     print("Starting...")
 
-    t1 = TimeMarker(enabled=keep_times)
+    t1 = TimeMarker(enabled=params["keep_times"])
 
     random.shuffle(video_files)
 
@@ -1387,15 +1385,15 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
     t1.mark(p="TIME init VGG16")
 
     # memory graph
-    memory_graph = MemoryGraph(db_path, space='cosine', dim=512, max_elements=max_elements)
-    memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.15, identical_distance = 0.01)
+    memory_graph = MemoryGraph(db_path, params)
+    memory_graph_walker = MemoryGraphWalker(memory_graph, params)
     
     t1.mark(p="TIME init Memory Graph")
 
     visited_videos = set()
 
     # for each run though the video
-    for r in range(runs):
+    for r in range(params["runs"]):
 
         print("Run", r)
 
@@ -1407,7 +1405,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
             
             visited_videos.add(video_file)
 
-            t2 = TimeMarker(enabled=keep_times)
+            t2 = TimeMarker(enabled=params["keep_times"])
 
             video_file_count += 1
 
@@ -1421,20 +1419,20 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
             memory_graph.increment_video_counts(video_objects)
 
             # walkers
-            g_pos = [None for _ in range(walker_count)]
-            pos = [None for _ in range(walker_count)]
-            adj = [False for _ in range(walker_count)]
+            g_pos = [None for _ in range(params["walker_count"])]
+            pos = [None for _ in range(params["walker_count"])]
+            adj = [False for _ in range(params["walker_count"])]
 
             done = False
 
             t2.mark(p="TIME open video")
 
             # for each frame
-            for t in range(max_frames):
+            for t in range(params["max_frames"]):
                 if done:
                     break
 
-                t3 = TimeMarker(enabled=keep_times)
+                t3 = TimeMarker(enabled=params["keep_times"])
 
                 video_ret, video_frame = video.read()
                 mask_ret, mask_frame = mask.read()
@@ -1449,16 +1447,16 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
 
                 obj_frame = color_fun(mask_frame)
 
-                kp_grid = key_point_grid(orb, video_frame, stride)
+                kp_grid = key_point_grid(orb, video_frame, params["stride"])
 
                 t3.mark(p="TIME key_point_grid")
 
-                for i in range(walker_count):
-                    g_pos[i], pos[i], adj[i] = next_pos(kp_grid, video_frame.shape, g_pos[i], walk_length, stride)
+                for i in range(params["walker_count"]):
+                    g_pos[i], pos[i], adj[i] = next_pos(kp_grid, video_frame.shape, g_pos[i], params["walk_length"], params["stride"])
 
                 t3.mark(p="TIME walker_count x next_pos")
 
-                patches = extract_windows(video_frame, pos, window_size)
+                patches = extract_windows(video_frame, pos, params["window_size"])
                 windows = patches.astype(np.float64)
 
                 t3.mark(p="TIME extract_windows")
@@ -1470,8 +1468,8 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
         
                 t3.mark(p="TIME preprocess_input + model.predict")
 
-                objects = extract_objects(obj_frame, pos, center_size)
-                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, objects, keep_times, prevent_similar_adjacencies)
+                objects = extract_objects(obj_frame, pos, params["center_size"])
+                ids = memory_graph_walker.add_parrelell_observations(video_file, t, pos, adj, feats, patches, objects)
 
                 observations_with_objects = len([x for x in objects if x is not None])
 
@@ -1494,7 +1492,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
 
                 time_stats = dict()
 
-                for i in range(walker_count):
+                for i in range(params["walker_count"]):
                     if ids[i][0] is None:
                         # restart walk because we are in a very predictable spot
                         g_pos[i] = None
@@ -1532,7 +1530,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                             nn_gte_30 += 1
                         if stats["near_neighbors_count"] >= 50:
                             nn_gte_50 += 1
-                    if keep_times:
+                    if params["keep_times"]:
                         for k, v in stats["time"].items():
                             if k not in time_stats:
                                 time_stats[k] = v
@@ -1541,11 +1539,11 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
 
                 t3.mark(p="TIME write patches + compute stats")
 
-                object_pixels = pixel_counts(obj_frame, center_size)
+                object_pixels = pixel_counts(obj_frame, params["center_size"])
                 # print("object_pixels", object_pixels)
                 memory_graph.increment_frame_counts(obj_frame.shape[0]*obj_frame.shape[1], object_pixels)
 
-                if keep_times:
+                if params["keep_times"]:
                     print(time_stats)
 
                 # print("avg_prediction_count", int(math.floor(prediction_count/200)), int(math.floor(prediction_members_count/200)))

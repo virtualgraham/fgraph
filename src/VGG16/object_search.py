@@ -16,17 +16,12 @@ from itertools import chain
 mask_path = "../../media/tabletop_objects/masks/"
 video_path = "../../media/tabletop_objects/videos/"
 db_path = "../../data/table_objects_i.db"
-max_frames = 30
-walker_count = 4
-window_size = 32
-stride = 24
-center_size = 16
-center_threshold = center_size*center_size*0.9
-grid_margin = 16
-walk_length = 10
-max_elements=1200000
 
-def key_point_grid(orb, frame, obj_frame, stride):
+
+
+
+
+def key_point_grid(orb, frame, obj_frame, grid_margin, stride):
 
     grid_width = math.floor((frame.shape[0] - grid_margin*2) / stride)
     grid_height = math.floor((frame.shape[1] - grid_margin*2) / stride)
@@ -88,50 +83,50 @@ def next_pos(kp_grid, shape, g_pos, walk_t, walk_length, stride):
     return loc, pos, False
 
 
-def search(files):
-    memory_graph = MemoryGraph(db_path, space='cosine', dim=512, max_elements=max_elements)
+def search(files, params):
+    memory_graph = MemoryGraph(db_path, params)
     cnn = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
     orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
 
     for file in files:
-        search_file(file, memory_graph, cnn, orb)
+        search_file(file, memory_graph, cnn, orb, params)
 
 
-def search_file(file, memory_graph, cnn, orb):
+def search_file(file, memory_graph, cnn, orb, params):
     print("search", file)
 
     mask = cv2.VideoCapture(join(mask_path,"mask_"+file))
     video = cv2.VideoCapture(join(video_path,file))
 
-    g_pos = [None for _ in range(walker_count)]
-    pos = [None for _ in range(walker_count)]
-    adj = [False for _ in range(walker_count)]
-    walk_t = [0 for _ in range(walker_count)]
-    cluster_feats = [[] for _ in range(walker_count)]
-    cluster_positions = [[] for _ in range(walker_count)]
-    cluster_patches = [[] for _ in range(walker_count)]
+    g_pos = [None for _ in range(params["search_walker_count"])]
+    pos = [None for _ in range(params["search_walker_count"])]
+    adj = [False for _ in range(params["search_walker_count"])]
+    walk_t = [0 for _ in range(params["search_walker_count"])]
+    cluster_feats = [[] for _ in range(params["search_walker_count"])]
+    cluster_positions = [[] for _ in range(params["search_walker_count"])]
+    cluster_patches = [[] for _ in range(params["search_walker_count"])]
 
     observation_ids = set()
 
     done = False
 
-    for t in range(max_frames):
-        if t % walk_length == 0:
+    for t in range(params["search_max_frames"]):
+        if t % params["search_walk_length"] == 0:
             print("frame", t)
 
         mask_ret, mask_frame = mask.read()
         video_ret, video_frame = video.read()
 
         if mask_ret == False or video_ret == False:
-            adj = [False for _ in range(walker_count)]
+            adj = [False for _ in range(params["search_walker_count"])]
         else:
             video_shape = video_frame.shape
 
             obj_frame = color_fun(mask_frame)
-            kp_grid = key_point_grid(orb, video_frame, obj_frame, stride)
+            kp_grid = key_point_grid(orb, video_frame, obj_frame, params["grid_margin"], params["stride"])
 
-            for i in range(walker_count):
-                g_pos[i], pos[i], adj[i] = next_pos(kp_grid, video_shape, g_pos[i], walk_t[i], walk_length, stride)
+            for i in range(params["search_walker_count"]):
+                g_pos[i], pos[i], adj[i] = next_pos(kp_grid, video_shape, g_pos[i], walk_t[i], params["search_walk_length"], params["stride"])
                 if t == 0:
                     adj[i] = True
                 if adj[i]:
@@ -139,7 +134,7 @@ def search_file(file, memory_graph, cnn, orb):
                 else:
                     walk_t[i] = 0
 
-            patches = extract_windows(video_frame, pos, window_size)
+            patches = extract_windows(video_frame, pos, params["window_size"])
             windows = patches.astype(np.float64)
 
             preprocess_input(windows)
@@ -149,17 +144,17 @@ def search_file(file, memory_graph, cnn, orb):
         if mask_ret == False or video_ret == False:
             done = True
         else:
-            for i in range(walker_count):
+            for i in range(params["search_walker_count"]):
                 cluster_feats[i].append(feats[i])
                 cluster_positions[i].append(pos[i])
                 cluster_patches[i].append(patches[i])
 
-        for i in range(walker_count):
+        for i in range(params["search_walker_count"]):
             if (not adj[i] or done) and len(cluster_feats[i]) > 0:
 
                 ########
                 
-                similar_clusters = memory_graph.search_group(cluster_feats[i], k=30)
+                similar_clusters = memory_graph.search_group(cluster_feats[i], params)
                 node_ids = set(chain.from_iterable(similar_clusters))
                 observation_ids.update(memory_graph.observations_for_nodes(node_ids))
                 
@@ -214,7 +209,7 @@ def search_file(file, memory_graph, cnn, orb):
         else:
             video_frame = video_file[o["t"]][False]
 
-        video_frame.update(extract_window_pixels((o["y"], o["x"]), video_shape, window_size))
+        video_frame.update(extract_window_pixels((o["y"], o["x"]), video_shape, params["window_size"]))
         
 
     labeled_frames = 0
@@ -238,6 +233,7 @@ def search_file(file, memory_graph, cnn, orb):
     
     print("")
     print(datetime.now())
+    print(params)
     print(object_name)
     print("len(observations)", len(observations))
     print("")
@@ -400,4 +396,39 @@ files = [
 ]
 
 
-search(files)
+
+params = {
+    "walk_length": 100,
+    "window_size": 32, 
+    "center_size": 16,
+    "stride": 24,
+    "runs": 1,
+    "max_frames": 30*30,
+    "walker_count": 500,
+    "max_elements": 12000000,
+    "keep_times": False,
+    "prevent_similar_adjacencies": False,
+    "knn": 50, 
+    "accurate_prediction_limit": 12, 
+    "distance_threshold": 0.15, 
+    "prediction_history_length": 7, 
+    "history_community_matches": 1, 
+    "identical_distance": 0.01,
+    "space": 'cosine', 
+    "dim": 512, 
+    "ef": 300, 
+    "M": 64, 
+    "rebuild_index": False,
+    "search_max_frames": 30,
+    "search_walker_count": 4,
+    "grid_margin": 16,
+    "search_walk_length": 10,
+    "feature_dis": 0.4, 
+    "community_dis": 0.200, 
+    "search_knn": 100, 
+    "initial_walk_length": 8, 
+    "member_portion": 100, 
+    "walk_trials": 1000
+}
+
+search(files, params)

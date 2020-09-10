@@ -565,3 +565,33 @@ pixel_true_negative 0.9999808706502118
 1024 0.12679274414130393 51
 2048 0.2913655887397555 93
 4096 0.4326073029343598 253
+
+
+
+2020-09-10 17:22:40.895219
+{'walk_length': 100, 'window_size': 32, 'center_size': 16, 'stride': 24, 'runs': 1, 'max_frames': 900, 'walker_count': 500, 'max_elements': 12000000, 'keep_times': False, 'prevent_similar_adjacencies': True, 'knn': 50, 'accurate_prediction_limit': 12, 'distance_threshold': 0.15, 'prediction_history_length': 7, 'history_community_matches': 1, 'identical_distance': 0.01, 'space': 'cosine', 'dim': 512, 'ef': 300, 'M': 64, 'rebuild_index': False, 'search_max_frames': 30, 'search_walker_count': 4, 'grid_margin': 16, 'search_walk_length': 10, 'feature_dis': 0.4, 'community_dis': 0.2, 'search_knn': 100, 'initial_walk_length': 8, 'member_portion': 100, 'walk_trials': 1000}
+apple
+len(observations) 3979
+
+observations_of_sample_class 0.6820809248554913 2714 3979
+observations_not_of_sample_class 0.3179190751445087
+
+observations_true_positive 0.7086161879895562 2714 3830
+observations_false_negative 0.29138381201044383
+observations_false_positive 0.006216674447747992 1265 203485
+observations_true_negative 0.993783325552252
+
+video_true_positive 1.0 1 1
+video_false_negative 0.0
+video_false_positive None 0 0
+video_true_negative None
+
+frame_true_positive 0.8571428571428571 360 420
+frame_false_negative 0.1428571428571429
+frame_false_positive 0.35294117647058826 12 34
+frame_true_negative 0.6470588235294117
+
+pixel_true_positive 0.2309314455659931 2243508 9715039
+pixel_false_negative 0.7690685544340069
+pixel_false_positive 0.0026691413230043783 1090855 408691361
+pixel_true_negative 0.9973308586769957
