@@ -25,7 +25,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 # from collections import Counter
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 30, accurate_prediction_limit = 20, distance_threshold = 0.1, adjacency_radius = 3, prediction_history_length=7, history_community_matches=1, identical_distance=0.01):
+    def __init__(self, memory_graph, knn = 30, accurate_prediction_limit = 20, distance_threshold = 0.15, adjacency_radius = 3, prediction_history_length=7, history_community_matches=1, identical_distance=0.01):
 
         self.knn = knn
         self.accurate_prediction_limit = accurate_prediction_limit
@@ -849,7 +849,9 @@ class MemoryGraph:
                 if last_community == community:
                     break
 
-                community_features = np.array([self.get_node(c)["f"] for c in community])
+
+                community_features = np.array([i for i in [self.get_node(c)["f"] for c in community] if i is not None])
+
                 community_features_max = np.max(community_features, axis=0)
                 d = self.distance(community_features_max, features_max)
                 print(walk_length, d, len(community))
