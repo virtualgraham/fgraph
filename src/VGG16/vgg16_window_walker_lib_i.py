@@ -25,13 +25,12 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 # from collections import Counter
 
 class MemoryGraphWalker:
-    def __init__(self, memory_graph, knn = 30, accurate_prediction_limit = 20, distance_threshold = 0.15, adjacency_radius = 3, prediction_history_length=7, history_community_matches=1, identical_distance=0.01):
+    def __init__(self, memory_graph, knn = 50, accurate_prediction_limit = 12, distance_threshold = 0.15, prediction_history_length=7, history_community_matches=1, identical_distance=0.01):
 
         self.knn = knn
         self.accurate_prediction_limit = accurate_prediction_limit
         self.identical_distance = identical_distance
         self.distance_threshold = distance_threshold
-        self.adjacency_radius = adjacency_radius
         self.prediction_history_length = prediction_history_length
         self.history_community_matches = history_community_matches
         self.memory_graph = memory_graph
@@ -1367,7 +1366,7 @@ def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stri
 
 
 
-def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, window_size = 32, center_size = 16, stride = 16, runs = 1, max_frames=30*30, walker_count = 200, max_elements=10000000, keep_times=False):
+def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, window_size = 32, center_size = 16, stride = 24, runs = 1, max_frames=30*30, walker_count = 500, max_elements=12000000, keep_times=False):
 
     print("Starting...")
 
@@ -1388,7 +1387,7 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
 
     # memory graph
     memory_graph = MemoryGraph(db_path, space='cosine', dim=512, max_elements=max_elements)
-    memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.15, identical_distance=0.01)
+    memory_graph_walker = MemoryGraphWalker(memory_graph, distance_threshold = 0.15, identical_distance = 0.01)
     
     t1.mark(p="TIME init Memory Graph")
 
@@ -1486,9 +1485,9 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                 adjacencies_inserted = 0
                 prediction_count = 0
                 prediction_members_count = 0
-                nn_gte_10 = 0
-                nn_gte_20 = 0
+                nn_gte_15 = 0
                 nn_gte_30 = 0
+                nn_gte_50 = 0
                 skipped = 0
                 adjacencies_skipped = 0
 
@@ -1526,12 +1525,12 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                     if "adjacencies_inserted" in stats:
                         adjacencies_inserted += stats["adjacencies_inserted"]
                     if "near_neighbors_count" in stats:
-                        if stats["near_neighbors_count"] >= 10:
-                            nn_gte_10 += 1
-                        if stats["near_neighbors_count"] >= 20:
-                            nn_gte_20 += 1
+                        if stats["near_neighbors_count"] >= 15:
+                            nn_gte_15 += 1
                         if stats["near_neighbors_count"] >= 30:
                             nn_gte_30 += 1
+                        if stats["near_neighbors_count"] >= 50:
+                            nn_gte_50 += 1
                     if keep_times:
                         for k, v in stats["time"].items():
                             if k not in time_stats:
@@ -1554,17 +1553,17 @@ def build_graph(db_path, video_path, mask_path, video_files, walk_length = 100, 
                     "frame", t+1,
                     "start", restart_count, 
                     "nn00", near_neighbor_count,
-                    "nn10", nn_gte_10,
-                    "nn20", nn_gte_20,
+                    "nn15", nn_gte_15,
                     "nn30", nn_gte_30,
+                    "nn50", nn_gte_50,
                     "iden", is_identical_count,
                     # "pred", has_predictions_count,
                     "accu", has_accurate_predictions_count,
                     "many", has_too_many_accurate_predictions_count,
                     "obj", observations_with_objects,
                     "adj", adjacencies_inserted,
-                    "skp", skipped,
-                    "askp", adjacencies_skipped
+                    # "skp", skipped,
+                    # "askp", adjacencies_skipped
                 )
 
                 
