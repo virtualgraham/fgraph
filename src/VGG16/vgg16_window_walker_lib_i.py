@@ -15,14 +15,11 @@ from collections import Counter
 import numpy as np
 import cv2
 import hnswlib
-# import networkx as nx
 import plyvel
 import community_walk_graph as cwg
 
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
-
-# from collections import Counter
 
 class MemoryGraphWalker:
     def __init__(self, memory_graph, params):
@@ -707,21 +704,6 @@ class MemoryGraph:
     def get_adjacencies(self, node_id, radius):
         cwg.neighbors(self.graph, node_id, radius)
    
-   
-    #     return self._neighbors(node_id, radius, set())
-        
-
-    # def _neighbors(self, v, radius, path):
-    #     result = set()
-    #     for w in cwg.neighbors(self.graph, v, 1):
-    #         if w in path:
-    #             continue
-    #         result.add(w)
-    #         if len(path) + 1 < radius:
-    #             result.update(self._neighbors(w, radius, path.union({w})))
-    #     return result
-
-    # TODO: should be parallelizable safe (networkx)
     def insert_adjacency(self, from_id, to_id):
         if(from_id == to_id): return
         self.save_edges([(from_id, to_id)])
@@ -734,46 +716,16 @@ class MemoryGraph:
         for e in edges:
             cwg.add_edge(self.graph, e[0], e[1])
 
-    # TODO: should be parallelizable safe (hnswlib)
+
     def knn_query(self, feats, k=1):
         if len(feats) == 0:
             return ([],[])
         return self.index.knn_query(feats, k)   
 
-    # TODO: should be parallelizable safe (hnswlib)
     def index_count(self):
         return cwg.len(self.graph)
-        # return self.index.get_current_count()
 
-
-    # def random_walk(self, start, l, trials):
-    #     visited = dict()
-
-    #     for _ in range(trials):
-    #         cur = start
-    #         for _ in range(l):
-    #             nei = list(cwg.neighbors(self.graph, cur, 1))
-    #             if len(nei) == 0:
-    #                 break
-    #             cur = random.choice(nei)
-    #             if cur in visited:
-    #                 visited[cur] += 1
-    #             else:
-    #                 visited[cur] = 1
     
-    #     nodes = []
-    #     count = []
-
-    #     if not bool(visited):
-    #         return [], []
-
-    #     for key, value in visited.items():
-    #         nodes.append(key)
-    #         count.append(value)
-
-    #     return zip(*sorted(zip(count, nodes), reverse=True))
-    
-
     def get_communities(self, node_ids, walk_length=10, walk_trials=1000, member_portion=200):
         return cwg.communities(self.graph, node_ids, walk_length, walk_trials, member_portion)
 
@@ -785,20 +737,8 @@ class MemoryGraph:
         if save_to_db:
             community = self.read_community(node_id, walk_length, walk_trials, member_portion)
             if community is not None:
-                # print("read community")
                 return set(community)
-
-        # counts, node_ids = self.random_walk(node_id, walk_length, walk_trials)
-
-        # n = 0
-        # for i in range(len(counts)):
-        #     count = counts[i]
-        #     if count < member_portion:
-        #         break
-        #     n += 1
-
-        # community = node_ids[:n]
-        
+  
         community = cwg.community(self.graph, node_id, walk_length, walk_trials, member_portion)
 
         if save_to_db:
@@ -840,7 +780,10 @@ class MemoryGraph:
             walk_length =  params["initial_walk_length"]
             last_community = frozenset()
 
-            for j in range(9): # 16 32 64 128 256 512 1024 2048 4096
+            while True: # 16 32 64 128 256 512 1024 2048 4096
+                if walk_length >= params["max_walk_length"]:
+                    break
+
                 if walk_length ==  params["initial_walk_length"]:
                     community = frozenset(communities[i])
                 else:
@@ -868,125 +811,6 @@ class MemoryGraph:
 
         return results
 
-
-    def search_group_c(self, features, feature_dis=0.30, community_dis=0.20, k=30, log2_min_len=3, log2_max_len=12, member_portion=200, walk_trials=1000):
-        
-        if len(features) == 0:
-            return set()
-
-        lab, dis = self.knn_query(features, k=k)
-        features_max = np.max(features, axis=0)
-        
-        labels_merged = list(chain.from_iterable(lab))
-        distances_merged = list(chain.from_iterable(dis))
-
-        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
-
-        results = set()
-
-
-        for i in range(len(neighbor_nodes_merged)):
-            
-            communities = self.get_communities_range([neighbor_nodes_merged[i]], log2_min_len=log2_min_len, log2_max_len=log2_max_len, walk_trials=walk_trials, member_portion=member_portion)[0]
-
-            last_community = []
-
-            for j in range(log2_max_len-log2_min_len+1):
-                community = communities[j]
-                if len(community) == 0:
-                    break
-                community_features = np.array([self.get_node(c)["f"] for c in community])
-                community_features_max = np.max(community_features, axis=0)
-                d = self.distance(community_features_max, features_max)
-                print(2**(log2_min_len + j), d, len(community))
-                
-                if d > community_dis:
-                    break
-
-                last_community = community
-
-            
-            results.add(frozenset(last_community))
-
-        return results
-
-
-
-
-    def search_group_b(self, features, feature_dis=0.12, community_dis=0.12, k=30, walk_length_short=10, walk_length_long=1000, member_portion_short=200, member_portion_long=500, walk_trials=1000):
-        
-        if len(features) == 0:
-            return set()
-
-        lab, dis = self.knn_query(features, k=k)
-        features_max = np.max(features, axis=0)
-        
-        labels_merged = list(chain.from_iterable(lab))
-        distances_merged = list(chain.from_iterable(dis))
-
-        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
-
-        community_cache_list_a = self.get_communities(neighbor_nodes_merged, walk_length=walk_length_short, walk_trials=walk_trials, member_portion=member_portion_short)
-        community_cache_list_b = self.get_communities(neighbor_nodes_merged, walk_length=walk_length_long, walk_trials=walk_trials, member_portion=member_portion_long)
-        
-        results = set()
-
-        for i in range(len(neighbor_nodes_merged)):
-            community_a = community_cache_list_a[i]
-            community_b = community_cache_list_b[i]
-            if len(community_a) == 0:
-                continue
-            community_features = np.array([self.get_node(c)["f"] for c in community_a])
-            community_features_max = np.max(community_features, axis=0)
-            d = self.distance(community_features_max, features_max)
-            if d <= community_dis:
-                results.add(frozenset(community_b))
-
-        return results
-
-
-    def search_group_a(self, features, feature_dis=0.12, community_dis=0.12, k=30, walk_length=10, member_portion=100, iterations=10, walk_trials=1000):
-        
-        def iterative_group_search(node_ids):
-            unvisited = set(node_ids)
-            visited = set()
-
-            for i in range(iterations):
-                foo = set(chain.from_iterable(self.get_communities(list(unvisited), walk_length=10, walk_trials=walk_trials, member_portion=500)))
-                bar = foo - visited
-                visited = set(unvisited)
-                unvisited.update(bar)
-            
-            return unvisited.union(visited)
-
-
-        if len(features) == 0:
-            return set()
-
-        lab, dis = self.knn_query(features, k=k)
-        features_max = np.max(features, axis=0)
-        
-        labels_merged = list(chain.from_iterable(lab))
-        distances_merged = list(chain.from_iterable(dis))
-
-        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= feature_dis]))
-
-        community_cache_list = self.get_communities(neighbor_nodes_merged, walk_length=walk_length, walk_trials=walk_trials, member_portion=member_portion)
-
-        results = set()
-
-        for i in range(len(neighbor_nodes_merged)):
-            community = community_cache_list[i]
-            if len(community) == 0:
-                continue
-            community_features = np.array([self.get_node(c)["f"] for c in community])
-            community_features_max = np.max(community_features, axis=0)
-            d = self.distance(community_features_max, features_max)
-            if d <= community_dis:
-                baz = iterative_group_search(community)
-                results.add(frozenset(baz))
-
-        return results
 
     def distance(self, a, b):
         if self.space == 'cosine':
@@ -1036,27 +860,6 @@ def first_pos(kp_grid):
     ## TODO: if there are no key points in frame
     loc = random.choice(list(kp_grid.keys()))
     return loc, random.choice(kp_grid[loc])
-
-
-
-def next_pos_play(kp_grid, shape, g_pos, stride):
-    rad_grid = get_rad_grid(g_pos, 1, shape, stride)
-    print("rad_grid", rad_grid)
-    candidates = []
-
-    for loc in rad_grid:
-
-        if loc in kp_grid:
-            candidates.append(loc)
-
-
-    if len(candidates) == 0:
-        return None, None
-
-    loc = random.choice(candidates)
-
-    return loc, random.choice(kp_grid[loc])
-
 
 
 def next_pos(kp_grid, shape, g_pos, walk_length, stride):
@@ -1144,33 +947,6 @@ def extract_window(frame, pos, window_size):
 
     return frame[bottom_left[0]:top_right[0], bottom_left[1]:top_right[1]]
 
-def extract_window_pixels(pos, frame_shape, window_size):
-    half_w = window_size/2.0
-    bottom_left = [int(round(pos[0]-half_w)), int(round(pos[1]-half_w))]
-    top_right = [bottom_left[0]+window_size, bottom_left[1]+window_size]
-   
-    if bottom_left[0] < 0:
-        top_right[0] -= bottom_left[0]
-        bottom_left[0] = 0
-
-    if bottom_left[1] < 0:
-        top_right[1] -= bottom_left[1]
-        bottom_left[1] = 0
-
-    if top_right[0] >= frame_shape[0]:
-        bottom_left[0] -= (top_right[0]-frame_shape[0]+1)
-        top_right[0] = frame_shape[0]-1
-
-    if top_right[1] >= frame_shape[1]:
-        bottom_left[1] -= (top_right[1]-frame_shape[1]+1)
-        top_right[1] = frame_shape[1]-1
-
-    points = []
-    for y in range(bottom_left[0], top_right[0]):
-        for x in range(bottom_left[1], top_right[1]):
-            points.append((y,x))
-            
-    return points
 
 def key_point_grid(orb, frame, stride):
 
@@ -1191,179 +967,6 @@ def key_point_grid(orb, frame, stride):
 
     return grid
 
-
-
-def paint_windows(positions, windows, frame, window_size, rect=-1):
-    for i in range(len(positions)):
-        pos = positions[i]
-        x1 = int(round(pos[1] - window_size/2.0))
-        x2 = x1 + window_size
-        y1 = int(round(pos[0] - window_size/2.0))
-        y2 = y1 + window_size
-        
-        window = windows[i]
-
-        if abs(y1-y2) != window_size and abs(x1-x2) != window_size:
-            continue
-
-        wx1 = 0
-        wx2 = window_size
-        wy1 = 0
-        wy2 = window_size
-
-        shape = frame.shape
-
-        if y1 < 0:
-            if y1 < -window_size:
-                continue
-            wy1 = -y1
-            y1 = 0
-        if y2 >= shape[0]:
-            if y2 >= (shape[0] + window_size):
-                continue
-            wy2 = window_size - (y2 - shape[0] + 1)
-            y2 = shape[0]-1 
-        if x1 < 0:
-            if x1 < -window_size:
-                continue
-            wx1 = -x1
-            x1 = 0
-        if x2 >= shape[1]:
-            if x2 >= (shape[1] + window_size):
-                continue
-            wx2 = window_size - (x2 - shape[1] + 1)
-            x2 = shape[1]-1
-
-        frame[y1:y2, x1:x2] = window[wy1:wy2, wx1:wx2]
-
-        if rect > -1:
-            x1 = int(round(pos[1] - window_size/2.0))
-            x2 = int(round(pos[0] - window_size/2.0))
-            y1 = x1 + window_size
-            y2 = x2 + window_size
-
-            cv2.rectangle(frame, (y1, y2), (x1,x2), colors[rect % len(colors)], 1)
-
-
-def show_patches(path_windows, path_features, path_positions, frame_shape, memory_graph, window_size):
-    print("show_patches")
-
-    cv2.namedWindow("patches")
-
-    frame = np.zeros((frame_shape[0], frame_shape[1], 3), np.uint8)
-
-    paint_windows(path_positions, path_windows, frame, window_size, 0)
-
-    # features, feature_dis, community_dis, k=30
-    groups = list(memory_graph.search_group(path_features, .2, .2, 30))
-
-    print("groups", groups)
-
-    for i in range(len(groups)):
-        group = list(groups[i])
-        
-        # node_ids = memory_graph.get_nodes(group)
-        
-        observation_ids = []
-        for node_id in group:
-            # print("node_id", node_id)
-            integrated_observations = memory_graph.get_integrated_observations(node_id)
-            observation_ids.extend(integrated_observations)
-            predicted_observations = memory_graph.get_predicted_observations(node_id)
-            observation_ids.extend(predicted_observations)
-
-        observations = memory_graph.get_observations(observation_ids)
-
-        windows = np.array([obs["patch"] for obs in observations])
-        positions = [(obs["y"], obs["x"]) for obs in observations]
-
-        paint_windows(positions, windows, frame, window_size, i+1)
-
-    cv2.imshow('patches', frame) 
-
-
-
-def play_video(db_path, playback_random_walk_length = 10, window_size = 32, stride = 16, max_elements=10000000):
-
-    def on_click(event, x, y, flags, param):
-        if event != cv2.EVENT_LBUTTONUP:
-            return
-        
-        # kp = clostest_key_points(key_points, (x,y), 1)[0]
-
-        res_frame = resize_frame(frame)
-        kp_grid = key_point_grid(orb, res_frame, stride)
-        print("len(kp_grid)", len(kp_grid))
-
-        pos = (y, x)
-
-        grid_offset_x = ((frame.shape[0] - 32) % stride)/2.0 + 16
-        grid_offset_y = ((frame.shape[1] - 32) % stride)/2.0 + 16
-        g_pos = (int(math.floor((pos[0]-grid_offset_x)/stride)), int(math.floor((pos[1]-grid_offset_y)/stride)))
-
-        print("g_pos", g_pos)
-        path = []
-
-        for i in range(playback_random_walk_length):
-            g_pos, pos = next_pos_play(kp_grid, res_frame.shape, g_pos, stride)
-            print("g_pos, pos", g_pos, pos)
-            if g_pos is None:
-                break
-            path.append(pos)
-
-        path = list(set(path))
-
-        windows = np.array([extract_window(res_frame, p, window_size) for p in path])
-        print("windows.shape, windows.dtype", windows.shape, windows.dtype)
-
-        preprocess_input(windows)
-        features = model.predict(windows)
-        features = features.reshape((windows.shape[0], 512))
-        
-        print("windows.shape, windows.dtype", windows.shape, windows.dtype)
-        print("feats.shape, feats.dtype", windows.shape, windows.dtype)
-
-        show_patches(windows, features, path, frame.shape, memory_graph, window_size)
-
-    orb = cv2.ORB_create(nfeatures=100000, fastThreshold=7)
-
-    memory_graph = MemoryGraph(db_path, max_elements=max_elements, space='cosine', dim=512)
-
-    model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(32, 32, 3))
-
-    cap = cv2.VideoCapture(video_file) 
-   
-    # Check if camera opened successfully 
-    if (cap.isOpened() == False):  
-        print("Error opening video  file") 
-
-    cv2.namedWindow("preview")
-    cv2.setMouseCallback("preview", on_click)
-
-    # Read until video is completed 
-    while(cap.isOpened()): 
-        
-        # Capture frame-by-frame 
-        ret, frame = cap.read() 
-        
-        if ret == True: 
-            
-            # Display the resulting frame 
-            cv2.imshow('preview', frame) 
-        
-            # Press Q on keyboard to  exit 
-            key = cv2.waitKey(0)
-
-            if key == 27: # exit on ESC
-                break
-
-        # Break the loop 
-        else:  
-            break
-    
-
-    cap.release() 
-    cv2.destroyAllWindows() 
 
 def build_graph(db_path, video_path, mask_path, video_files, params):
 
@@ -1584,22 +1187,7 @@ def build_graph(db_path, video_path, mask_path, video_files, params):
 
     print("Done")
 
-    
-colors = [
-    (1, 0, 103), (213, 255, 0), (255, 0, 86), (158, 0, 142), (14, 76, 161), (255, 229, 2), (0, 95, 57),(0, 255, 0), 
-    (149, 0, 58), (255, 147, 126), (164, 36, 0), (0, 21, 68), (145, 208, 203), (98, 14, 0),(107, 104, 130), 
-    (0, 0, 255), (0, 125, 181), (106, 130, 108), (0, 174, 126), (194, 140, 159), (190, 153, 112), (0, 143, 156), 
-    (95, 173, 78), (255, 0, 0), (255, 0, 246), (255, 2, 157), (104, 61, 59), (255, 116, 163), (150, 138, 232), 
-    (152, 255, 82), (167, 87, 64), (1, 255, 254), (255, 238, 232), (254, 137, 0), (189, 198, 255),(1, 208, 255), 
-    (187, 136, 0), (117, 68, 177), (165, 255, 210), (255, 166, 254), (119, 77, 0), (122, 71, 130), (38, 52, 0), 
-    (0, 71, 84), (67, 0, 44), (181, 0, 255), (255, 177, 103), (255, 219, 102), (144, 251, 146), (126, 45, 210), 
-    (189, 211, 147), (229, 111, 254), (222, 255, 116), (0, 255, 120), (0, 155, 255), (0, 100, 1), (0, 118, 255), 
-    (133, 169, 0), (0, 185, 23), (120, 130, 49), (0, 255, 198), (255, 110, 65), (232, 94, 190), (0, 0, 0)
-]
-
-
 color_dist = 15
-
 
 color_vectors = [
     np.array((0,0,0)),
@@ -1621,9 +1209,7 @@ color_vectors = [
     np.array((178,213,251)), 
 ]
 
-
 color_full = np.array([np.tile(cv, (1280, 720, 1)) for cv in color_vectors])
-
 
 color_objects = [
     None,
@@ -1741,6 +1327,7 @@ PARAMETERS = {
     "community_dis": 0.200,
     "search_knn": 100,
     "initial_walk_length": 8,  
+    "max_walk_length": 4096
     "member_portion": 100,
     "walk_trials": 1000,
 }
