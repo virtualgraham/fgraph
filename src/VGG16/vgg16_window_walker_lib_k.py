@@ -913,19 +913,24 @@ def extract_object(window, center_size):
         return None
 
 
-def extract_objects(obj_frame, pos, center_size):
-    windows = np.empty((len(pos), center_size, center_size), dtype=np.uint8)
+def extract_objects(obj_frame, pos, center_size, size_steps = 4):
+
+    border_size = int(math.ceil(center_size*2**(size_steps-2)))
+    obj_frame_with_border = cv2.copyMakeBorder(img, border_size, border_size, border_size, border_size, borderType=cv2.BORDER_CONSTANT, value=[0, 0, 0])
+
+    result = []
 
     for i in range(len(pos)):
-        windows[i] = extract_window(obj_frame, pos[i], center_size)
+        for j in range(size_steps):
+            result.append(extract_object(extract_window_from_frame_with_border(obj_frame_with_border, pos[i], center_size*2**j, border_size), center_size*2**j))
 
-    return [extract_object(w, center_size) for w in windows]
+    return result
 
 
 
 def extract_windows(frame, pos, window_size, size_steps = 4):
 
-    border_size = int(math.ceil(window_size*2**(size_steps-1)/2))
+    border_size = int(math.ceil(window_size*2**(size_steps-2)))
     frame_with_border = cv2.copyMakeBorder(img, border_size, border_size, border_size, border_size, cv2.BORDER_REPLICATE)
 
     windows = np.empty((len(pos) * size_steps, window_size, window_size, 3), dtype=np.uint8)
@@ -1136,11 +1141,17 @@ def build_graph(db_path, video_path, mask_path, video_files, params):
                 time_stats = dict()
 
                 for i in range(params["walker_count"]):
-                    if ids[i][0] is None:
-                        # restart walk because we are in a very predictable spot
-                        g_pos[i] = None
-                        pos[i] = None
-                        adj[i] = False  
+                    for j in params["size_steps"]:
+                        
+                        ###############
+                        # TODO: HERE
+                        ###############
+
+                        if ids[i][0] is None:
+                            # restart walk because we are in a very predictable spot
+                            g_pos[i] = None
+                            pos[i] = None
+                            adj[i] = False  
 
                     stats = ids[i][2]
 
@@ -1348,8 +1359,8 @@ PARAMETERS = {
     "ef": 300, 
     "M": 64, 
 	"rebuild_index": False,
-    "keep_times": False,
-
+    "keep_times": False, 
+    "size_steps": 4,
 	"stride": 24,
 	"center_size": 16,
 	"walk_length": 100,
