@@ -29,6 +29,7 @@ class MemoryGraphWalker:
         self.identical_distance = params["identical_distance"]
         self.distance_threshold = params["distance_threshold"]
         self.prediction_history_length = params["prediction_history_length"]
+        self.cluster_length = params["cluster_length"]
         self.history_community_matches = params["history_community_matches"]
         self.keep_times = params["keep_times"]
         self.prevent_similar_adjacencies = params["prevent_similar_adjacencies"]
@@ -38,72 +39,101 @@ class MemoryGraphWalker:
 
         self.memory_graph = memory_graph
 
-        self.last_ids = dict()
+        
+        
+        self.history_feats = dict()
+        self.history_obs = dict()
         self.history_nn = dict()
-        self.last_feats = dict()
-        self.last_obs = dict()
+        self.last_ids = dict()
+        self.last_community_max_feats = dict()
 
     def add_parrelell_observations(self, file, t, pos, adj, feats, patches, objects):
-        if self.memory_graph.index_count() >= self.knn:
-            labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
-        else:
-            labels = [[] for i in range(len(feats))]
-            distances = [[] for i in range(len(feats))]
+        # if self.memory_graph.index_count() >= self.knn:
+        #     labels, distances = self.memory_graph.knn_query(feats, k = self.knn)
+        # else:
+        #     labels = [[] for i in range(len(feats))]
+        #     distances = [[] for i in range(len(feats))]
 
-        # get all the labels less than threshold distance together in one list
-        labels_merged = list(chain.from_iterable(labels))
-        distances_merged = list(chain.from_iterable(distances))
+        # # get all the labels less than threshold distance together in one list
+        # labels_merged = list(chain.from_iterable(labels))
+        # distances_merged = list(chain.from_iterable(distances))
 
-        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= self.distance_threshold]))
+        # neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= self.distance_threshold]))
 
-        community_cache_list = self.memory_graph.get_communities(neighbor_nodes_merged, walk_trials=self.walk_trials, member_portion=self.member_portion)
+        # community_cache_list = self.memory_graph.get_communities(neighbor_nodes_merged, walk_trials=1000, member_portion=100)
 
-        community_cache = dict([(neighbor_nodes_merged[i], frozenset(community_cache_list[i])) for i in range(len(neighbor_nodes_merged))])
+        # community_cache = dict([(neighbor_nodes_merged[i], frozenset(community_cache_list[i])) for i in range(len(neighbor_nodes_merged))])
 
-        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], labels[i], distances[i], i, community_cache) for i in range(len(feats))]
+        return [self._add_observation(file, t, pos[i], adj[i], feats[i], patches[i], objects[i], i) for i in range(len(feats))]
 
 
 
-    def _add_observation(self, file, t, pos, adj, feats, patch, obj, labels, distances, walker_id, community_cache):
+    def _add_observation(self, file, t, pos, adj, feats, patch, obj, walker_id):
  
         stats = {"adj":adj}
 
         tm = TimeMarker(enabled=self.keep_times)
 
-        if self.prevent_similar_adjacencies:
-            if adj and walker_id in self.last_feats:
-                d = self.memory_graph.distance(feats, self.last_feats[walker_id])
-                if d <= self.distance_threshold:
-                    stats["skipped"] = True
-                    return self.last_ids[walker_id], self.last_obs[walker_id], stats
-
-        stats["skipped"] = False
 
         observation = {"file":file, "t":t, "y":pos[0], "x":pos[1], "patch":patch}
         if obj is not None: observation["o"] = obj
         observation_id = self.memory_graph.insert_observation(observation)
 
-        tm.mark(s="insert_observation")
+        if not adj or walker_id not in self.history_feats:
+            self.history_feats[walker_id] = []
+            self.history_obs[walker_id] = []
+
+        self.history_feats[walker_id].append(feats)
+        self.history_obs[walker_id].append(observation_id)
+
+        if len(self.history_feats[walker_id]) > self.cluster_length:
+            self.history_feats[walker_id].pop(0)
+            self.history_obs[walker_id].pop(0)
+
+
+        community_features_max = np.max(np.array(self.history_feats[walker_id]), axis=0)
+
+        if adj and walker_id in self.last_community_max_feats:
+            d = self.memory_graph.distance(community_features_max, self.last_community_max_feats[walker_id])
+            if d <= self.distance_threshold:
+                stats["skipped"] = True
+                return self.last_ids[walker_id], observation_id, stats
+        stats["skipped"] = False
+
+
+        if self.memory_graph.index_count() >= self.knn:
+            _labels, _distances = self.memory_graph.knn_query([community_features_max], k = self.knn)
+            labels = _labels[0]
+            distances = _distances[0]
+        else:
+            labels = []
+            distances = []
 
         
+        if len(distances) > 0:
+            stats["nearest_neighbor"] = distances[0]
+
         if len(distances) > 0 and distances[0] <= self.distance_threshold: 
-            neighbor_nodes = set([l for l,d in zip(labels, distances) if d <= self.distance_threshold])
+            neighbor_nodes_list = [l for l,d in zip(labels, distances) if d <= self.distance_threshold]
+            neighbor_nodes = set(neighbor_nodes_list)
         else:
+            neighbor_nodes_list = []
             neighbor_nodes = set()
-
-
 
         stats["near_neighbors_count"] = len(neighbor_nodes)
 
-        if len(distances) > 0:
-            stats["nearest_neighbor"] = distances[0]
+
+        community_cache_list = self.memory_graph.get_communities(neighbor_nodes_list, walk_trials=self.walk_trials, member_portion=self.member_portion)
+        community_cache = dict([(neighbor_nodes_list[i], frozenset(community_cache_list[i])) for i in range(len(neighbor_nodes_list))])
+
+
+        tm.mark(s="insert_observation")
 
         tm.mark(l="find_correct_predictions", s="knn_query")
 
         accurate_predictions = set()
         skipped_accurate_predictions = set()
         evaluated_ids = set()
-
 
 
         if adj and walker_id in self.history_nn and len(neighbor_nodes) > 0:
@@ -117,8 +147,6 @@ class MemoryGraphWalker:
 
             tm.mark(l="build_accurate_predictions_set")
             
-            
-
             for nn in neighbor_nodes:
                 nn_community = community_cache[nn]
                 
@@ -130,19 +158,7 @@ class MemoryGraphWalker:
                         bar.update(foo)
                         baz += 1
                 if baz >= self.history_community_matches:
-                    if self.prevent_similar_adjacencies:
-                        for b in bar:
-                            if b not in accurate_predictions and b not in skipped_accurate_predictions:
-                                d = self.memory_graph.distance(self.memory_graph.get_node(b)["f"], feats)
-                                if d > self.distance_threshold:
-                                    accurate_predictions.add(b)
-                                    if len(accurate_predictions) >= self.accurate_prediction_limit:
-                                        break
-                                else:
-                                    skipped_accurate_predictions.add(b)
-                    else:
-                        accurate_predictions.update(bar)
-
+                    accurate_predictions.update(bar)
                     add_predicted_observations.add(nn)
 
                 if len(accurate_predictions) >= self.accurate_prediction_limit:
@@ -158,7 +174,15 @@ class MemoryGraphWalker:
             tm.mark(l="add_predicted_observations")
 
             if len(add_predicted_observations) > 0:
-                self.memory_graph.add_predicted_observations(add_predicted_observations, [observation_id]*len(add_predicted_observations))
+                
+                arg_a = []
+                arg_b = []
+                for p_node in add_predicted_observations:
+                    for h_obs in self.history_obs[walker_id]:
+                        arg_a.append(p_node)
+                        arg_b.append(h_obs)
+
+                self.memory_graph.add_predicted_observations(arg_a, arg_b)
 
             tm.mark(si="add_predicted_observations")
 
@@ -173,11 +197,10 @@ class MemoryGraphWalker:
             if len(distances) > 0 and (distances[0] < self.identical_distance):
                 node_id = labels[0]
                 stats["identical"] = True
-
             else:
-                node_id = self.memory_graph.insert_node({"f":feats})
+                node_id = self.memory_graph.insert_node({"f":community_features_max})
 
-            self.memory_graph.add_integrated_observations([node_id], [observation_id])
+            self.memory_graph.add_integrated_observations([node_id]*len(self.history_obs[walker_id]), self.history_obs[walker_id])
     
             stats["adjacencies_inserted"] = 0
 
@@ -198,6 +221,7 @@ class MemoryGraphWalker:
 
         tm.mark(s="insert_node_and_adjacencies")
 
+
         #################
         # updating history
         #################
@@ -205,20 +229,19 @@ class MemoryGraphWalker:
         if walker_id not in self.history_nn:
             self.history_nn[walker_id] = []
 
-        h = self.history_nn[walker_id]
-        h.append(frozenset(neighbor_nodes))
-        if len(h) > self.prediction_history_length:
-            h.pop(0)
+        self.history_nn[walker_id].append(neighbor_nodes)
+
+        if len(self.history_nn[walker_id]) > self.prediction_history_length:
+            self.history_nn[walker_id].pop(0)
+
+        self.last_ids[walker_id] = node_id
+        self.last_community_max_feats[walker_id] = community_features_max
 
 
         tm.mark(s="make_predictions")
 
         if self.keep_times:
             stats["time"] = tm.saved
-
-        self.last_ids[walker_id] = node_id
-        self.last_feats[walker_id] = feats
-        self.last_obs[walker_id] = observation_id
 
         return node_id, observation_id, stats
         
@@ -762,6 +785,60 @@ class MemoryGraph:
         return observation_ids
 
 
+    def search_group_foo(self, features, params):
+        if len(features) == 0:
+            return set()
+
+        features_max = np.max(features, axis=0)
+        lab, dis = self.knn_query([features_max], k=params["search_knn"])
+
+        labels_merged = list(chain.from_iterable(lab))
+        distances_merged = list(chain.from_iterable(dis))
+
+        neighbor_nodes_merged = list(set([l for l,d in zip(labels_merged, distances_merged) if d <= params["feature_dis"]]))
+
+        results = set()
+
+        communities = self.get_communities(neighbor_nodes_merged, walk_length= params["initial_walk_length"], walk_trials=params["walk_trials"], member_portion=params["member_portion"])
+
+        for i in range(len(neighbor_nodes_merged)):
+            
+            walk_length =  params["initial_walk_length"]
+            last_community = frozenset()
+
+            while True: # 16 32 64 128 256 512 1024 2048 4096
+                if walk_length >= params["max_walk_length"]:
+                    break
+
+                if walk_length ==  params["initial_walk_length"]:
+                    community = frozenset(communities[i])
+                else:
+                    community = frozenset(self.get_communities([neighbor_nodes_merged[i]], walk_length=walk_length, walk_trials=params["walk_trials"], member_portion=params["member_portion"])[0])
+
+                if last_community == community:
+                    break
+
+                
+                community_features_list = [i for i in [self.get_node(c)["f"] for c in community] if i is not None]
+                if len(community_features_list) == 0:
+                    break
+                community_features = np.array(community_features_list)
+                community_features_max = np.max(community_features, axis=0)
+                d = self.distance(community_features_max, features_max)
+                print(walk_length, d, len(community))
+
+                if d >  params["community_dis"]:
+                    break
+
+                last_community = community
+                walk_length = walk_length * 2 
+
+            results.add(last_community)
+
+        return results
+
+
+
     def search_group(self, features, params):
         
         if len(features) == 0:
@@ -971,6 +1048,7 @@ def key_point_grid(orb, frame, stride):
 
     return grid
 
+
 def extract_window_pixels(pos, frame_shape, window_size):
     half_w = window_size/2.0
     bottom_left = [int(round(pos[0]-half_w)), int(round(pos[1]-half_w))]
@@ -998,7 +1076,8 @@ def extract_window_pixels(pos, frame_shape, window_size):
             points.append((y,x))
             
     return points
-    
+
+
 def build_graph(db_path, video_path, mask_path, video_files, params):
 
     print("Starting...")
@@ -1137,7 +1216,7 @@ def build_graph(db_path, video_path, mask_path, video_files, params):
 
                     if not stats["adj"]:
                         restart_count += 1
-                    if "nearest_neighbor" in stats and stats["nearest_neighbor"] < .1:
+                    if "nearest_neighbor" in stats and stats["nearest_neighbor"] < params["distance_threshold"]:
                         near_neighbor_count += 1
                     if "skipped" in stats and stats["skipped"]:
                         skipped += 1
@@ -1195,7 +1274,7 @@ def build_graph(db_path, video_path, mask_path, video_files, params):
                     "many", has_too_many_accurate_predictions_count,
                     "obj", observations_with_objects,
                     "adj", adjacencies_inserted,
-                    # "skp", skipped,
+                    "clus", params["walker_count"] - skipped,
                     # "askp", adjacencies_skipped
                 )
 
@@ -1343,21 +1422,22 @@ PARAMETERS = {
 
 	"stride": 24,
 	"center_size": 16,
-	"walk_length": 100,
+	"walk_length": 700,
     "walker_count": 200,
     "prevent_similar_adjacencies": False,
     "knn": 50,
     "accurate_prediction_limit": 12,
-    "distance_threshold": 0.15,
-    "prediction_history_length": 7,
+    "distance_threshold": 0.2,
+    "prediction_history_length": 3,
+    "cluster_length": 7,
     "history_community_matches": 1,
-    "identical_distance": 0.15,
+    "identical_distance": 0.01,
     "search_walker_count": 4,
-    "search_walk_length": 10,
+    "search_walk_length": 7,
     "feature_dis": 0.4,
     "community_dis": 0.200,
     "search_knn": 100,
-    "initial_walk_length": 8,  
+    "initial_walk_length": 2,  
     "max_walk_length": 4096,
     "member_portion": 100,
     "walk_trials": 1000,
