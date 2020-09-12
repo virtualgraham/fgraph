@@ -777,6 +777,9 @@ class MemoryGraph:
 
         results = set()
 
+        # if params["initial_walk_length"] == 1:
+        #     communities = [[n] for n in neighbor_nodes_merged]
+        # else:
         communities = self.get_communities(neighbor_nodes_merged, walk_length= params["initial_walk_length"], walk_trials=params["walk_trials"], member_portion=params["member_portion"])
 
         for i in range(len(neighbor_nodes_merged)):
@@ -787,6 +790,7 @@ class MemoryGraph:
             while True: # 16 32 64 128 256 512 1024 2048 4096
                 if walk_length >= params["max_walk_length"]:
                     break
+
                 
                 if walk_length ==  params["initial_walk_length"]:
                     community = frozenset(communities[i])
@@ -918,38 +922,43 @@ def extract_objects(obj_frame, pos, center_size):
     return [extract_object(w, center_size) for w in windows]
 
 
-def extract_windows(frame, pos, window_size):
-    windows = np.empty((len(pos), window_size, window_size, 3), dtype=np.uint8)
+
+def extract_windows(frame, pos, window_size, size_steps = 4):
+
+    border_size = int(math.ceil(window_size*2**(size_steps-1)/2))
+    frame_with_border = cv2.copyMakeBorder(img, border_size, border_size, border_size, border_size, cv2.BORDER_REPLICATE)
+
+    windows = np.empty((len(pos) * size_steps, window_size, window_size, 3), dtype=np.uint8)
 
     for i in range(len(pos)):
-        windows[i] = extract_window(frame, pos[i], window_size)
+        for j in range(size_steps):
+            full_size = extract_window_from_frame_with_border(frame, pos[i], window_size*2**j, border_size)
+            if j == 0:
+                windows[i * size_steps + j] = full_size
+            else:
+                windows[i * size_steps + j] = cv2.resize(full_size, (window_size, window_size))
 
     return windows
 
 
-
-def extract_window(frame, pos, window_size):
-    half_w = window_size/2.0
-    bottom_left = [int(round(pos[0]-half_w)), int(round(pos[1]-half_w))]
-    top_right = [bottom_left[0]+window_size, bottom_left[1]+window_size]
+def extract_window_from_frame_with_border(frame_with_border, pos, window_size, border_size):
    
-    if bottom_left[0] < 0:
-        top_right[0] -= bottom_left[0]
-        bottom_left[0] = 0
+    half_w = window_size/2.0
 
-    if bottom_left[1] < 0:
-        top_right[1] -= bottom_left[1]
-        bottom_left[1] = 0
-
-    if top_right[0] >= frame.shape[0]:
-        bottom_left[0] -= (top_right[0]-frame.shape[0]+1)
-        top_right[0] = frame.shape[0]-1
-
-    if top_right[1] >= frame.shape[1]:
-        bottom_left[1] -= (top_right[1]-frame.shape[1]+1)
-        top_right[1] = frame.shape[1]-1
-
+    bottom_left = (
+        int(round(border_size+pos[0]-half_w)), 
+        int(round(border_size+pos[1]-half_w))
+    )
+    top_right = (
+        bottom_left[0]+window_size, 
+        bottom_left[1]+window_size
+    )
+   
     return frame[bottom_left[0]:top_right[0], bottom_left[1]:top_right[1]]
+
+
+
+
 
 
 def key_point_grid(orb, frame, stride):

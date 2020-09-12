@@ -9,7 +9,7 @@ from datetime import datetime
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-from vgg16_window_walker_lib_i import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, paint_windows, MemoryGraph, extract_window_pixels, PARAMETERS
+from vgg16_window_walker_lib_i import color_fun, extract_windows, extract_window, extract_object, get_rad_grid, MemoryGraph, extract_window_pixels, PARAMETERS
 
 from itertools import chain
 
@@ -342,9 +342,9 @@ def search_file(file, memory_graph, cnn, orb,  mask_path, video_path, params):
 
 
 files = [
-    '001_apple.mp4',
-    '002_apple.mp4',
-    '003_apple.mp4',
+    # '001_apple.mp4',
+    # '002_apple.mp4',
+    # '003_apple.mp4',
     '004_bear.mp4',
     '005_bear.mp4',
     '006_bear.mp4',
